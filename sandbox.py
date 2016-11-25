@@ -5,6 +5,7 @@ import sys
 import pygame
 from pygame.locals import *
 from pipes import PIPES
+from copy import deepcopy
 
 pipeind = 0
 FPS = 3000
@@ -127,6 +128,7 @@ def main():
         )
 
         movementInfo = showWelcomeAnimation()
+        print movementInfo
         crashInfo = mainGame(movementInfo)
         showGameOverScreen(crashInfo)
 
@@ -184,6 +186,8 @@ def showWelcomeAnimation():
         FPSCLOCK.tick(FPS)
 
 
+
+
 def mainGame(movementInfo):
     score = playerIndex = loopIter = 0
     playerIndexGen = movementInfo['playerIndexGen']
@@ -193,8 +197,8 @@ def mainGame(movementInfo):
     baseShift = IMAGES['base'].get_width() - IMAGES['background'].get_width()
 
     # get 2 new pipes to add to upperPipes lowerPipes list
-    newPipe1 = getRandomPipe()
-    newPipe2 = getRandomPipe()
+    newPipe1 = getPipe()
+    newPipe2 = getPipe()
 
     # list of upper pipes
     upperPipes = [
@@ -217,7 +221,6 @@ def mainGame(movementInfo):
     playerAccY    =   1   # players downward accleration
     playerFlapAcc =  -9   # players speed on flapping
     playerFlapped = False # True when player flaps
-
 
     while True:
         for event in pygame.event.get():
@@ -249,13 +252,14 @@ def mainGame(movementInfo):
             pipeMidPos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
             if pipeMidPos <= playerMidPos < pipeMidPos + 4:
                 score += 1
-                SOUNDS['point'].play()
 
-        # playerIndex basex change
-        if (loopIter + 1) % 3 == 0:
-            playerIndex = playerIndexGen.next()
-        loopIter = (loopIter + 1) % 30
-        basex = -((-basex + 100) % baseShift)
+        # # MIGHT NEED THIS LATER XXX
+        # # playerIndex basex change
+        # if (loopIter + 1) % 3 == 0:
+        #     playerIndex = playerIndexGen.next()
+        # loopIter = (loopIter + 1) % 30
+        # basex = -((-basex + 100) % baseShift)
+        # print basex
 
         # player's movement
         if playerVelY < playerMaxVelY and not playerFlapped:
@@ -272,7 +276,7 @@ def mainGame(movementInfo):
 
         # add new pipe when first pipe is about to touch left of screen
         if 0 < upperPipes[0]['x'] < 5:
-            newPipe = getRandomPipe()
+            newPipe = getPipe()
             upperPipes.append(newPipe[0])
             lowerPipes.append(newPipe[1])
 
@@ -358,9 +362,9 @@ def playerShm(playerShm):
         playerShm['val'] -= 1
 
 
-def getRandomPipe():
+def getPipe():
     global pipeind
-    """returns a randomly generated pipe"""
+    """returns the next pipe from the master list"""
     p = PIPES[pipeind]
     pipeind += 1
     return p
