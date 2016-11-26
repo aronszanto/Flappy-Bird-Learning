@@ -52,7 +52,7 @@ PIPES_LIST = (
 )
 
 
-def main():
+def main(actionList):
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -127,7 +127,7 @@ def main():
         )
 
         movementInfo = showWelcomeAnimation()
-        crashInfo = mainGame(movementInfo)
+        crashInfo = mainGame(movementInfo, actionList)
         showGameOverScreen(crashInfo)
 
 
@@ -152,39 +152,32 @@ def showWelcomeAnimation():
     # player shm for up-down motion on welcome screen
     playerShmVals = {'val': 0, 'dir': 1}
 
-    while True:
-        for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-                pygame.quit()
-                sys.exit()
-            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                # make first flap sound and return values for mainGame
-                SOUNDS['wing'].play()
-                return {
-                    'playery': playery + playerShmVals['val'],
-                    'basex': basex,
-                    'playerIndexGen': playerIndexGen,
-                }
-
-        # adjust playery, playerIndex, basex
-        if (loopIter + 1) % 5 == 0:
-            playerIndex = playerIndexGen.next()
-        loopIter = (loopIter + 1) % 30
-        basex = -((-basex + 4) % baseShift)
-        playerShm(playerShmVals)
-
-        # draw sprites
-        SCREEN.blit(IMAGES['background'], (0,0))
-        SCREEN.blit(IMAGES['player'][playerIndex],
-                    (playerx, playery + playerShmVals['val']))
-        SCREEN.blit(IMAGES['message'], (messagex, messagey))
-        SCREEN.blit(IMAGES['base'], (basex, BASEY))
-
-        pygame.display.update()
-        FPSCLOCK.tick(FPS)
 
 
-def mainGame(movementInfo):
+    # adjust playery, playerIndex, basex
+    if (loopIter + 1) % 5 == 0:
+        playerIndex = playerIndexGen.next()
+    loopIter = (loopIter + 1) % 30
+    basex = -((-basex + 4) % baseShift)
+    playerShm(playerShmVals)
+
+    # draw sprites
+    SCREEN.blit(IMAGES['background'], (0,0))
+    SCREEN.blit(IMAGES['player'][playerIndex],
+                (playerx, playery + playerShmVals['val']))
+    SCREEN.blit(IMAGES['message'], (messagex, messagey))
+    SCREEN.blit(IMAGES['base'], (basex, BASEY))
+
+    pygame.display.update()
+    FPSCLOCK.tick(FPS)
+    return {
+        'playery': playery + playerShmVals['val'],
+        'basex': basex,
+        'playerIndexGen': playerIndexGen,
+    }
+
+
+def mainGame(movementInfo, actionList):
     score = playerIndex = loopIter = 0
     playerIndexGen = movementInfo['playerIndexGen']
     playerx, playery = int(SCREENWIDTH * 0.2), movementInfo['playery']
@@ -217,7 +210,7 @@ def mainGame(movementInfo):
     playerAccY    =   1   # players downward accleration
     playerFlapAcc =  -9   # players speed on flapping
     playerFlapped = False # True when player flaps
-    action_list = [True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+    action_list = actionList
     actionind = 0
     while True:
         for event in pygame.event.get():
@@ -300,12 +293,15 @@ def mainGame(movementInfo):
         showScore(score)
         SCREEN.blit(IMAGES['player'][playerIndex], (playerx, playery))
 
+
         pygame.display.update()
         FPSCLOCK.tick(FPS)
 
 
 def showGameOverScreen(crashInfo):
     """crashes the player down ans shows gameover image"""
+    print crashInfo
+
     score = crashInfo['score']
     playerx = SCREENWIDTH * 0.2
     playery = crashInfo['y']

@@ -8,7 +8,7 @@ from pipes import PIPES
 from copy import deepcopy
 
 pipeind = 0
-SCORE_GOAL = 1
+SCORE_GOAL = 100
 FPS = 3000
 SCREENWIDTH = 288
 SCREENHEIGHT = 512
@@ -70,6 +70,7 @@ class FB_State:
         self.acc = 0
         self.index = 0
         self.pipeindex = 0
+        self.crashed = False
         self.upipes = []
         self.lpipes = []
 
@@ -82,8 +83,9 @@ class FB_State:
                     self.acc,
                     self.index,
                     self.pipeindex,
+                    self.crashed,
                     tuple(self.upipes),
-                    tuple(self.lpipes)
+                    tuple(self.lpipes),
                     ))
 
     def __hash__(self):
@@ -95,13 +97,14 @@ class FB_State:
 
 def getStart():
     state = FB_State()
-    state.score = 0
+    state.score = int(0)
     state.index = 0
     state.x = int(SCREENWIDTH * 0.2)
     state.y = int((SCREENHEIGHT - IMAGES['player'][0].get_height()) / 2)
     # get 2 new pipes to add to upperPipes lowerPipes list
     newPipe1 = PIPES[0]
     newPipe2 = PIPES[1]
+    state.crashed = False
     state.pipeindex = 2
 
     # list of upper pipes
@@ -127,13 +130,17 @@ def isGoalState(state):
 
 expanded = 0
 def getSuccessors(state):
+    if state.crashed:
+        return []
     global expanded
     expanded += 1
     # if expanded % 100 == 0:
     #     print state.x, state.y, state.velx, state.vely
     successors = []
     for flapped in [True, False]:
+
         newState = deepcopy(state)
+
 
         if flapped:
             if newState.y > -2 * IMAGES['player'][0].get_height():
@@ -157,14 +164,14 @@ def getSuccessors(state):
                                newState.upipes, newState.lpipes)
         # if crash, not a successor
         if crashTest[0]:
-            continue
+            newState.crashed = True
 
         # check for score
         playerMidPos = newState.x + IMAGES['player'][0].get_width() / 2
         for pipe in newState.upipes:
             pipeMidPos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
             if pipeMidPos <= playerMidPos < pipeMidPos + 4:
-                newState.score += 1
+                newState.score = int(newState.score + 1)
 
         # add new pipe when first pipe is about to touch left of screen
         if 0 < newState.upipes[0]['x'] < 5:
@@ -177,7 +184,7 @@ def getSuccessors(state):
         if newState.upipes[0]['x'] < -IMAGES['pipe'][0].get_width():
             newState.upipes.pop(0)
             newState.lpipes.pop(0)
-        successors.append((newState, flapped, 1))
+        successors.append((newState, flapped, 0))
     return successors
 
 
@@ -291,4 +298,3 @@ def getHitmask(image):
         for y in range(image.get_height()):
             mask[x].append(bool(image.get_at((x, y))[3]))
     return mask
-initialize()

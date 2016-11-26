@@ -40,6 +40,8 @@ def search(structure, cost_function=None):
         cur = fringe.pop()
         if called % 10000 == 0:
             print called, cur
+        if called % 1000 == 0:
+            print heuristic(cur)
         if node_util.isGoalState(cur[0]):
             return cur[1]
         else:
@@ -56,14 +58,16 @@ def search(structure, cost_function=None):
                     visited[successor[0]]=visited[cur[0]] + successor[2]
                     fringe.push((successor[0], newpath), visited[
                                 cur[0]], cost_function(successor))
-from node_util import IMAGES
+from node_util import IMAGES, PIPEGAPSIZE, initialize
 def heuristic(state):
     state = state[0]
     playerMidPos = state.x + IMAGES['player'][0].get_width() / 2
     for upipe, lpipe in zip(state.upipes, state.lpipes):
         pipeMidPos = upipe['x'] + IMAGES['pipe'][0].get_width() / 2
         if pipeMidPos > playerMidPos:
-            y_avg = float(upipe['y'] + lpipe['y']) / 2
-            return abs(state.y - y_avg) + abs(state.x - pipeMidPos)
-
-print search(util.PriorityQueue, heuristic)
+            y_coord = lpipe['y'] - PIPEGAPSIZE + 37
+            return abs(state.y - y_coord) + abs(state.x - pipeMidPos) - (state.score * 1000)
+initialize()
+actionList = search(util.PriorityQueue, lambda successor: heuristic(successor))
+import flappy_follow
+flappy_follow.main(actionList)
