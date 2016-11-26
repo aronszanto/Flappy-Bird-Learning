@@ -8,17 +8,18 @@ from pipes import PIPES
 from copy import deepcopy
 
 pipeind = 0
+SCORE_GOAL = 1
 FPS = 3000
-SCREENWIDTH  = 288
+SCREENWIDTH = 288
 SCREENHEIGHT = 512
-playerMaxVelY =  10   # max vel along Y, max descend speed
-playerMinVelY =  -8   # min vel along Y, max ascend speed
+playerMaxVelY = 10   # max vel along Y, max descend speed
+playerMinVelY = -8   # min vel along Y, max ascend speed
 pipeVelX = -4
-playerFlapAcc =  -9   # players speed on flapping
+playerFlapAcc = -9   # players speed on flapping
 
 # amount by which base can maximum shift to left
-PIPEGAPSIZE  = 100 # gap between upper and lower part of pipe
-BASEY        = SCREENHEIGHT * 0.79
+PIPEGAPSIZE = 100  # gap between upper and lower part of pipe
+BASEY = SCREENHEIGHT * 0.79
 # image, sound and hitmask  dicts
 IMAGES, SOUNDS, HITMASKS = {}, {}, {}
 
@@ -58,8 +59,8 @@ PIPES_LIST = (
 )
 
 
-
 class FB_State:
+
     def __init__(self):
         self.score = 0
         self.x = 0
@@ -71,6 +72,26 @@ class FB_State:
         self.pipeindex = 0
         self.upipes = []
         self.lpipes = []
+
+    def __repr__(self):
+        return str((self.score,
+                    self.x,
+                    self.y,
+                    self.velx,
+                    self.vely,
+                    self.acc,
+                    self.index,
+                    self.pipeindex,
+                    tuple(self.upipes),
+                    tuple(self.lpipes)
+                    ))
+
+    def __hash__(self):
+        return hash(repr(self))
+
+    def __str__(self):
+        return repr(self)
+
 
 def getStart():
     state = FB_State()
@@ -84,31 +105,47 @@ def getStart():
     state.pipeindex = 2
 
     # list of upper pipes
-    upperPipes = [
+    state.upipes = [
         {'x': SCREENWIDTH + 200, 'y': newPipe1[0]['y']},
         {'x': SCREENWIDTH + 200 + (SCREENWIDTH / 2), 'y': newPipe2[0]['y']},
     ]
 
     # list of lowerpipe
-    lowerPipes = [
+    state.lpipes = [
         {'x': SCREENWIDTH + 200, 'y': newPipe1[1]['y']},
         {'x': SCREENWIDTH + 200 + (SCREENWIDTH / 2), 'y': newPipe2[1]['y']},
     ]
 
     # player velocity, max velocity, downward accleration, accleration on flap
-    state.vely    =  -9   # player's velocity along Y, default same as playerFlapped
-    state.acc    =   1   # players downward accleration
+    state.vely = -9   # player's velocity along Y, default same as playerFlapped
+    state.acc = 1   # players downward accleration
+    return state
 
+
+def isGoalState(state):
+    return state.score == SCORE_GOAL
+
+expanded = 0
 def getSuccessors(state):
+    global expanded
+    expanded += 1
+    # if expanded % 100 == 0:
+    #     print state.x, state.y, state.velx, state.vely
     successors = []
     for flapped in [True, False]:
         newState = deepcopy(state)
+
+        if flapped:
+            if newState.y > -2 * IMAGES['player'][0].get_height():
+                newState.vely = playerFlapAcc
+            else:
+                continue
 
         # player movement
         if newState.vely < playerMaxVelY and not flapped:
             newState.vely += newState.acc
 
-        playerHeight = IMAGES['player'][playerIndex].get_height()
+        playerHeight = IMAGES['player'][newState.index].get_height()
         newState.y += min(newState.vely, BASEY - newState.y - playerHeight)
 
         # move pipes to left
@@ -117,7 +154,7 @@ def getSuccessors(state):
             lPipe['x'] += pipeVelX
 
         crashTest = checkCrash({'x': newState.x, 'y': newState.y, 'index': newState.index},
-                                newState.upipes, newState.lpipes)
+                               newState.upipes, newState.lpipes)
         # if crash, not a successor
         if crashTest[0]:
             continue
@@ -140,22 +177,25 @@ def getSuccessors(state):
         if newState.upipes[0]['x'] < -IMAGES['pipe'][0].get_width():
             newState.upipes.pop(0)
             newState.lpipes.pop(0)
-
         successors.append((newState, flapped, 1))
+    return successors
 
-def search():
+
+def initialize():
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
     SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 
     # base (ground) sprite
-    IMAGES['base'] = pygame.image.load('assets/sprites/base.png').convert_alpha()
+    IMAGES['base'] = pygame.image.load(
+        'assets/sprites/base.png').convert_alpha()
 
     # initialize
     # select random background sprites
     randBg = random.randint(0, len(BACKGROUNDS_LIST) - 1)
-    IMAGES['background'] = pygame.image.load(BACKGROUNDS_LIST[randBg]).convert()
+    IMAGES['background'] = pygame.image.load(
+        BACKGROUNDS_LIST[randBg]).convert()
 
     # select random player sprites
     randPlayer = random.randint(0, len(PLAYERS_LIST) - 1)
@@ -185,6 +225,9 @@ def search():
         getHitmask(IMAGES['player'][1]),
         getHitmask(IMAGES['player'][2]),
     )
+# def search():
+
+
 def checkCrash(player, upperPipes, lowerPipes):
     """returns True if player collders with base or pipes."""
     pi = player['index']
@@ -197,7 +240,7 @@ def checkCrash(player, upperPipes, lowerPipes):
     else:
 
         playerRect = pygame.Rect(player['x'], player['y'],
-                      player['w'], player['h'])
+                                 player['w'], player['h'])
         pipeW = IMAGES['pipe'][0].get_width()
         pipeH = IMAGES['pipe'][0].get_height()
 
@@ -212,13 +255,16 @@ def checkCrash(player, upperPipes, lowerPipes):
             lHitmask = HITMASKS['pipe'][1]
 
             # if bird collided with upipe or lpipe
-            uCollide = pixelCollision(playerRect, uPipeRect, pHitMask, uHitmask)
-            lCollide = pixelCollision(playerRect, lPipeRect, pHitMask, lHitmask)
+            uCollide = pixelCollision(
+                playerRect, uPipeRect, pHitMask, uHitmask)
+            lCollide = pixelCollision(
+                playerRect, lPipeRect, pHitMask, lHitmask)
 
             if uCollide or lCollide:
                 return [True, False]
 
     return [False, False]
+
 
 def pixelCollision(rect1, rect2, hitmask1, hitmask2):
     """Checks if two objects collide and not just their rects"""
@@ -232,9 +278,10 @@ def pixelCollision(rect1, rect2, hitmask1, hitmask2):
 
     for x in xrange(rect.width):
         for y in xrange(rect.height):
-            if hitmask1[x1+x][y1+y] and hitmask2[x2+x][y2+y]:
+            if hitmask1[x1 + x][y1 + y] and hitmask2[x2 + x][y2 + y]:
                 return True
     return False
+
 
 def getHitmask(image):
     """returns a hitmask using an image's alpha."""
@@ -242,7 +289,6 @@ def getHitmask(image):
     for x in range(image.get_width()):
         mask.append([])
         for y in range(image.get_height()):
-            mask[x].append(bool(image.get_at((x,y))[3]))
+            mask[x].append(bool(image.get_at((x, y))[3]))
     return mask
-
-search()
+initialize()

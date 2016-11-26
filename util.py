@@ -1,5 +1,5 @@
 # util.py
-
+import heapq
 class Stack:
     "A container with a last-in-first-out (LIFO) queuing policy."
     def __init__(self):

@@ -1,13 +1,12 @@
 from itertools import cycle
 import random
 import sys
-
+pipeind = 0
+from pipes import PIPES
 import pygame
 from pygame.locals import *
-from pipes import PIPES
-from copy import deepcopy
 
-pipeind = 0
+
 FPS = 3000
 SCREENWIDTH  = 288
 SCREENHEIGHT = 512
@@ -54,7 +53,6 @@ PIPES_LIST = (
 
 
 def main():
-
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -93,6 +91,7 @@ def main():
     SOUNDS['point']  = pygame.mixer.Sound('assets/audio/point' + soundExt)
     SOUNDS['swoosh'] = pygame.mixer.Sound('assets/audio/swoosh' + soundExt)
     SOUNDS['wing']   = pygame.mixer.Sound('assets/audio/wing' + soundExt)
+
     while True:
         # select random background sprites
         randBg = random.randint(0, len(BACKGROUNDS_LIST) - 1)
@@ -185,8 +184,6 @@ def showWelcomeAnimation():
         FPSCLOCK.tick(FPS)
 
 
-
-
 def mainGame(movementInfo):
     score = playerIndex = loopIter = 0
     playerIndexGen = movementInfo['playerIndexGen']
@@ -220,35 +217,38 @@ def mainGame(movementInfo):
     playerAccY    =   1   # players downward accleration
     playerFlapAcc =  -9   # players speed on flapping
     playerFlapped = False # True when player flaps
-    action_list = [True, True, False, False, False, True, True, True, False, True, True, True, True, False, True, True, False, False, False, True, True, True, False, True, True, True, True, False]
-    for action in action_list:
-        if action:
-            print 'flap'
-            playerVelY = playerFlapAcc
-            playerFlapped = True
-    # while True:
-    #     for event in pygame.event.get():
-    #         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-    #             pygame.quit()
-    #             sys.exit()
-    #         if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-    #             if playery > -2 * IMAGES['player'][0].get_height():
-    #                 playerVelY = playerFlapAcc
-    #                 playerFlapped = True
+    action_list = [True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+    actionind = 0
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+                if playery > -2 * IMAGES['player'][0].get_height():
+                    playerVelY = playerFlapAcc
+                    playerFlapped = True
+        if actionind < len(action_list) and action_list[actionind]:
+            if playery > -2 * IMAGES['player'][0].get_height():
+                playerVelY = playerFlapAcc
+                playerFlapped = True
+        actionind += 1
 
-        # check for crash here XXX
+
+
+        # check for crash here
         crashTest = checkCrash({'x': playerx, 'y': playery, 'index': playerIndex},
                                upperPipes, lowerPipes)
-        if crashTest[0]:
-            return {
-                'y': playery,
-                'groundCrash': crashTest[1],
-                'basex': basex,
-                'upperPipes': upperPipes,
-                'lowerPipes': lowerPipes,
-                'score': score,
-                'playerVelY': playerVelY,
-            }
+        # if crashTest[0]:
+        #     return {
+        #         'y': playery,
+        #         'groundCrash': crashTest[1],
+        #         'basex': basex,
+        #         'upperPipes': upperPipes,
+        #         'lowerPipes': lowerPipes,
+        #         'score': score,
+        #         'playerVelY': playerVelY,
+        #     }
 
         # check for score
         playerMidPos = playerx + IMAGES['player'][0].get_width() / 2
@@ -256,14 +256,13 @@ def mainGame(movementInfo):
             pipeMidPos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
             if pipeMidPos <= playerMidPos < pipeMidPos + 4:
                 score += 1
+                SOUNDS['point'].play()
 
-        # # MIGHT NEED THIS LATER XXX
-        # # playerIndex basex change
-        # if (loopIter + 1) % 3 == 0:
-        #     playerIndex = playerIndexGen.next()
-        # loopIter = (loopIter + 1) % 30
-        # basex = -((-basex + 100) % baseShift)
-        # print basex
+        # playerIndex basex change
+        if (loopIter + 1) % 3 == 0:
+            playerIndex = playerIndexGen.next()
+        loopIter = (loopIter + 1) % 30
+        basex = -((-basex + 100) % baseShift)
 
         # player's movement
         if playerVelY < playerMaxVelY and not playerFlapped:
@@ -372,7 +371,6 @@ def getPipe():
     p = PIPES[pipeind]
     pipeind += 1
     return p
-
 
 
 def showScore(score):
