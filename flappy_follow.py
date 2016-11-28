@@ -1,7 +1,8 @@
 from itertools import cycle
 import random
 import sys
-
+pipeind = 0
+from pipes import PIPES
 import pygame
 from pygame.locals import *
 
@@ -51,7 +52,7 @@ PIPES_LIST = (
 )
 
 
-def main():
+def main(actionList):
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -126,7 +127,7 @@ def main():
         )
 
         movementInfo = showWelcomeAnimation()
-        crashInfo = mainGame(movementInfo)
+        crashInfo = mainGame(movementInfo, actionList)
         showGameOverScreen(crashInfo)
 
 
@@ -151,39 +152,32 @@ def showWelcomeAnimation():
     # player shm for up-down motion on welcome screen
     playerShmVals = {'val': 0, 'dir': 1}
 
-    while True:
-        for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-                pygame.quit()
-                sys.exit()
-            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                # make first flap sound and return values for mainGame
-                SOUNDS['wing'].play()
-                return {
-                    'playery': playery + playerShmVals['val'],
-                    'basex': basex,
-                    'playerIndexGen': playerIndexGen,
-                }
-
-        # adjust playery, playerIndex, basex
-        if (loopIter + 1) % 5 == 0:
-            playerIndex = playerIndexGen.next()
-        loopIter = (loopIter + 1) % 30
-        basex = -((-basex + 4) % baseShift)
-        playerShm(playerShmVals)
-
-        # draw sprites
-        SCREEN.blit(IMAGES['background'], (0,0))
-        SCREEN.blit(IMAGES['player'][playerIndex],
-                    (playerx, playery + playerShmVals['val']))
-        SCREEN.blit(IMAGES['message'], (messagex, messagey))
-        SCREEN.blit(IMAGES['base'], (basex, BASEY))
-
-        pygame.display.update()
-        FPSCLOCK.tick(FPS)
 
 
-def mainGame(movementInfo):
+    # adjust playery, playerIndex, basex
+    if (loopIter + 1) % 5 == 0:
+        playerIndex = playerIndexGen.next()
+    loopIter = (loopIter + 1) % 30
+    basex = -((-basex + 4) % baseShift)
+    playerShm(playerShmVals)
+
+    # draw sprites
+    SCREEN.blit(IMAGES['background'], (0,0))
+    SCREEN.blit(IMAGES['player'][playerIndex],
+                (playerx, playery + playerShmVals['val']))
+    SCREEN.blit(IMAGES['message'], (messagex, messagey))
+    SCREEN.blit(IMAGES['base'], (basex, BASEY))
+
+    pygame.display.update()
+    FPSCLOCK.tick(FPS)
+    return {
+        'playery': playery + playerShmVals['val'],
+        'basex': basex,
+        'playerIndexGen': playerIndexGen,
+    }
+
+
+def mainGame(movementInfo, actionList):
     score = playerIndex = loopIter = 0
     playerIndexGen = movementInfo['playerIndexGen']
     playerx, playery = int(SCREENWIDTH * 0.2), movementInfo['playery']
@@ -192,8 +186,8 @@ def mainGame(movementInfo):
     baseShift = IMAGES['base'].get_width() - IMAGES['background'].get_width()
 
     # get 2 new pipes to add to upperPipes lowerPipes list
-    newPipe1 = getRandomPipe()
-    newPipe2 = getRandomPipe()
+    newPipe1 = getPipe()
+    newPipe2 = getPipe()
 
     # list of upper pipes
     upperPipes = [
@@ -216,8 +210,8 @@ def mainGame(movementInfo):
     playerAccY    =   1   # players downward accleration
     playerFlapAcc =  -9   # players speed on flapping
     playerFlapped = False # True when player flaps
-
-
+    action_list = actionList
+    actionind = 0
     while True:
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -227,20 +221,27 @@ def mainGame(movementInfo):
                 if playery > -2 * IMAGES['player'][0].get_height():
                     playerVelY = playerFlapAcc
                     playerFlapped = True
+        if actionind < len(action_list) and action_list[actionind]:
+            if playery > -2 * IMAGES['player'][0].get_height():
+                playerVelY = playerFlapAcc
+                playerFlapped = True
+        actionind += 1
+
+
 
         # check for crash here
         crashTest = checkCrash({'x': playerx, 'y': playery, 'index': playerIndex},
                                upperPipes, lowerPipes)
-        if crashTest[0]:
-            return {
-                'y': playery,
-                'groundCrash': crashTest[1],
-                'basex': basex,
-                'upperPipes': upperPipes,
-                'lowerPipes': lowerPipes,
-                'score': score,
-                'playerVelY': playerVelY,
-            }
+        # if crashTest[0]:
+        #     return {
+        #         'y': playery,
+        #         'groundCrash': crashTest[1],
+        #         'basex': basex,
+        #         'upperPipes': upperPipes,
+        #         'lowerPipes': lowerPipes,
+        #         'score': score,
+        #         'playerVelY': playerVelY,
+        #     }
 
         # check for score
         playerMidPos = playerx + IMAGES['player'][0].get_width() / 2
@@ -271,7 +272,7 @@ def mainGame(movementInfo):
 
         # add new pipe when first pipe is about to touch left of screen
         if 0 < upperPipes[0]['x'] < 5:
-            newPipe = getRandomPipe()
+            newPipe = getPipe()
             upperPipes.append(newPipe[0])
             lowerPipes.append(newPipe[1])
 
@@ -292,12 +293,15 @@ def mainGame(movementInfo):
         showScore(score)
         SCREEN.blit(IMAGES['player'][playerIndex], (playerx, playery))
 
+
         pygame.display.update()
         FPSCLOCK.tick(FPS)
 
 
 def showGameOverScreen(crashInfo):
     """crashes the player down ans shows gameover image"""
+    print crashInfo
+
     score = crashInfo['score']
     playerx = SCREENWIDTH * 0.2
     playery = crashInfo['y']
@@ -357,18 +361,12 @@ def playerShm(playerShm):
         playerShm['val'] -= 1
 
 
-def getRandomPipe():
-    """returns a randomly generated pipe"""
-    # y of gap between upper and lower pipe
-    gapY = random.randrange(0, int(BASEY * 0.6 - PIPEGAPSIZE))
-    gapY += int(BASEY * 0.2)
-    pipeHeight = IMAGES['pipe'][0].get_height()
-    pipeX = SCREENWIDTH + 10
-
-    return [
-        {'x': pipeX, 'y': gapY - pipeHeight},  # upper pipe
-        {'x': pipeX, 'y': gapY + PIPEGAPSIZE}, # lower pipe
-    ]
+def getPipe():
+    global pipeind
+    """returns the next pipe from the master list"""
+    p = PIPES[pipeind]
+    pipeind += 1
+    return p
 
 
 def showScore(score):

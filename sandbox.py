@@ -4,8 +4,10 @@ import sys
 
 import pygame
 from pygame.locals import *
+from pipes import PIPES
+from copy import deepcopy
 
-
+pipeind = 0
 FPS = 3000
 SCREENWIDTH  = 288
 SCREENHEIGHT = 512
@@ -52,6 +54,7 @@ PIPES_LIST = (
 
 
 def main():
+
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -90,7 +93,6 @@ def main():
     SOUNDS['point']  = pygame.mixer.Sound('assets/audio/point' + soundExt)
     SOUNDS['swoosh'] = pygame.mixer.Sound('assets/audio/swoosh' + soundExt)
     SOUNDS['wing']   = pygame.mixer.Sound('assets/audio/wing' + soundExt)
-
     while True:
         # select random background sprites
         randBg = random.randint(0, len(BACKGROUNDS_LIST) - 1)
@@ -183,6 +185,8 @@ def showWelcomeAnimation():
         FPSCLOCK.tick(FPS)
 
 
+
+
 def mainGame(movementInfo):
     score = playerIndex = loopIter = 0
     playerIndexGen = movementInfo['playerIndexGen']
@@ -192,8 +196,8 @@ def mainGame(movementInfo):
     baseShift = IMAGES['base'].get_width() - IMAGES['background'].get_width()
 
     # get 2 new pipes to add to upperPipes lowerPipes list
-    newPipe1 = getRandomPipe()
-    newPipe2 = getRandomPipe()
+    newPipe1 = getPipe()
+    newPipe2 = getPipe()
 
     # list of upper pipes
     upperPipes = [
@@ -216,19 +220,23 @@ def mainGame(movementInfo):
     playerAccY    =   1   # players downward accleration
     playerFlapAcc =  -9   # players speed on flapping
     playerFlapped = False # True when player flaps
+    action_list = [True, True, False, False, False, True, True, True, False, True, True, True, True, False, True, True, False, False, False, True, True, True, False, True, True, True, True, False]
+    for action in action_list:
+        if action:
+            print 'flap'
+            playerVelY = playerFlapAcc
+            playerFlapped = True
+    # while True:
+    #     for event in pygame.event.get():
+    #         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+    #             pygame.quit()
+    #             sys.exit()
+    #         if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+    #             if playery > -2 * IMAGES['player'][0].get_height():
+    #                 playerVelY = playerFlapAcc
+    #                 playerFlapped = True
 
-
-    while True:
-        for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-                pygame.quit()
-                sys.exit()
-            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                if playery > -2 * IMAGES['player'][0].get_height():
-                    playerVelY = playerFlapAcc
-                    playerFlapped = True
-
-        # check for crash here
+        # check for crash here XXX
         crashTest = checkCrash({'x': playerx, 'y': playery, 'index': playerIndex},
                                upperPipes, lowerPipes)
         if crashTest[0]:
@@ -248,13 +256,14 @@ def mainGame(movementInfo):
             pipeMidPos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
             if pipeMidPos <= playerMidPos < pipeMidPos + 4:
                 score += 1
-                SOUNDS['point'].play()
 
-        # playerIndex basex change
-        if (loopIter + 1) % 3 == 0:
-            playerIndex = playerIndexGen.next()
-        loopIter = (loopIter + 1) % 30
-        basex = -((-basex + 100) % baseShift)
+        # # MIGHT NEED THIS LATER XXX
+        # # playerIndex basex change
+        # if (loopIter + 1) % 3 == 0:
+        #     playerIndex = playerIndexGen.next()
+        # loopIter = (loopIter + 1) % 30
+        # basex = -((-basex + 100) % baseShift)
+        # print basex
 
         # player's movement
         if playerVelY < playerMaxVelY and not playerFlapped:
@@ -271,7 +280,7 @@ def mainGame(movementInfo):
 
         # add new pipe when first pipe is about to touch left of screen
         if 0 < upperPipes[0]['x'] < 5:
-            newPipe = getRandomPipe()
+            newPipe = getPipe()
             upperPipes.append(newPipe[0])
             lowerPipes.append(newPipe[1])
 
@@ -357,18 +366,13 @@ def playerShm(playerShm):
         playerShm['val'] -= 1
 
 
-def getRandomPipe():
-    """returns a randomly generated pipe"""
-    # y of gap between upper and lower pipe
-    gapY = random.randrange(0, int(BASEY * 0.6 - PIPEGAPSIZE))
-    gapY += int(BASEY * 0.2)
-    pipeHeight = IMAGES['pipe'][0].get_height()
-    pipeX = SCREENWIDTH + 10
+def getPipe():
+    global pipeind
+    """returns the next pipe from the master list"""
+    p = PIPES[pipeind]
+    pipeind += 1
+    return p
 
-    return [
-        {'x': pipeX, 'y': gapY - pipeHeight},  # upper pipe
-        {'x': pipeX, 'y': gapY + PIPEGAPSIZE}, # lower pipe
-    ]
 
 
 def showScore(score):
