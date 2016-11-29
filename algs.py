@@ -58,6 +58,7 @@ def search(structure, cost_function=None):
                     visited[successor[0]]=visited[cur[0]] + successor[2]
                     fringe.push((successor[0], newpath), visited[
                                 cur[0]], cost_function(successor))
+
 from node_util import IMAGES, PIPEGAPSIZE, initialize
 def heuristic(state):
     state = state[0]
