@@ -45,6 +45,27 @@ PLAYERS_LIST = (
         'assets/sprites/yellowbird-downflap.png',
     ),
 )
+# PLAYERS_LIST = (
+#     # red bird
+#     (
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#     ),
+#     # blue bird
+#     (
+#         # amount by which base can maximum shift to left
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#     ),
+#     # yellow bird
+#     (
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#     ),
+# )
 
 # list of backgrounds
 BACKGROUNDS_LIST = (
@@ -125,8 +146,8 @@ def getStart():
     return state
 
 
-def isGoalState(state):
-    return state.score == SCORE_GOAL
+def isGoalState(state, num_pipes):
+    return state.score == num_pipes
 
 expanded = 0
 def getSuccessors(state):

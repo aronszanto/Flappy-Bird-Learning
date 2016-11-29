@@ -17,7 +17,7 @@ class Fringe:
         return self.structure.isEmpty()
 
 
-def search(structure, cost_function=None):
+def search(structure, num_pipes, cost_function=None):
     import node_util
     if cost_function is None:
         cost_function = lambda successor: 0
@@ -38,12 +38,11 @@ def search(structure, cost_function=None):
     while not fringe.isEmpty():
         called += 1
         cur = fringe.pop()
-        if called % 10000 == 0:
-            print called, cur
-        if called % 1000 == 0:
-            print heuristic(cur)
-        if node_util.isGoalState(cur[0]):
-            return cur[1]
+        # if called % 5 == 0:
+        # #     print called, cur
+        #     print heuristic(cur)
+        if node_util.isGoalState(cur[0], num_pipes):
+            return cur[1], called
         else:
             for successor in node_util.getSuccessors(cur[0]):
                 if successor[0] in visited and visited[successor[0]] > (visited[cur[0]] + successor[2]):
@@ -60,6 +59,7 @@ def search(structure, cost_function=None):
                                 cur[0]], cost_function(successor))
 
 from node_util import IMAGES, PIPEGAPSIZE, initialize
+
 def heuristic(state):
     state = state[0]
     playerMidPos = state.x + IMAGES['player'][0].get_width() / 2
@@ -69,6 +69,18 @@ def heuristic(state):
             y_coord = lpipe['y'] - PIPEGAPSIZE + 37
             return abs(state.y - y_coord) + abs(state.x - pipeMidPos) - (state.score * 1000)
 initialize()
-actionList = search(util.PriorityQueue, lambda successor: heuristic(successor))
+actionList = search(util.PriorityQueue, 10, lambda successor: heuristic(successor))
 import flappy_follow
-flappy_follow.main(actionList)
+flappy_follow.main(actionList[0])
+
+# from time import time
+# with open("timing.out", 'w') as f:
+#     i = 20
+#     while i <= 450:
+#         start = time()
+#         s = search(util.PriorityQueue, i, lambda successor: heuristic(successor))
+#         num_expanded = s[1]
+#         length = len(s[0])
+#         # f.write(str(i) + ',' + str(time() - start) + ',' + str(num_expanded) + '\n')
+#         print i, str(time() - start) + ',' + str(num_expanded) + ',' + str(length) + ',' + str(float(num_expanded)/length)
+#         i += 20

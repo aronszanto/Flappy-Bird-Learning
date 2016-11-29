@@ -11,7 +11,7 @@ FPS = 3000
 SCREENWIDTH  = 288
 SCREENHEIGHT = 512
 # amount by which base can maximum shift to left
-PIPEGAPSIZE  = 100 # gap between upper and lower part of pipe
+PIPEGAPSIZE  = 50 # gap between upper and lower part of pipe
 BASEY        = SCREENHEIGHT * 0.79
 # image, sound and hitmask  dicts
 IMAGES, SOUNDS, HITMASKS = {}, {}, {}
@@ -38,6 +38,27 @@ PLAYERS_LIST = (
         'assets/sprites/yellowbird-downflap.png',
     ),
 )
+# PLAYERS_LIST = (
+#     # red bird
+#     (
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#     ),
+#     # blue bird
+#     (
+#         # amount by which base can maximum shift to left
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#     ),
+#     # yellow bird
+#     (
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#         'assets/sprites/scott1.png',
+#     ),
+# )
 
 # list of backgrounds
 BACKGROUNDS_LIST = (
