@@ -69,7 +69,7 @@ def heuristic(state):
             y_coord = lpipe['y'] - PIPEGAPSIZE + 37
             return abs(state.y - y_coord) + abs(state.x - pipeMidPos) - (state.score * 1000)
 initialize()
-actionList = search(util.PriorityQueue, 10, lambda successor: heuristic(successor))
+actionList = search(util.PriorityQueue, 450, lambda successor: heuristic(successor))
 import flappy_follow
 flappy_follow.main(actionList[0])
 

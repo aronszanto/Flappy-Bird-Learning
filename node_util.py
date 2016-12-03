@@ -217,7 +217,7 @@ def initialize():
 
     # base (ground) sprite
     IMAGES['base'] = pygame.image.load(
-        'assets/sprites/base.png').convert_alpha()
+        './assets/sprites/base.png').convert_alpha()
 
     # initialize
     # select random background sprites
