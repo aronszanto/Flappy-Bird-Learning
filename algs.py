@@ -22,11 +22,7 @@ def search(structure, num_pipes, cost_function=None):
             return 0
 
     fringe = Fringe(structure)
-
-    # holds visited nodes
     visited = {}
-    # (k,v) pair where k = node n1, v = parent of n1
-    parent = {}
     start = node_util.getStart()
     visited[start.state] = 0
 
