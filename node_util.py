@@ -7,7 +7,7 @@ from pygame.locals import *
 from pipes import PIPES
 from copy import deepcopy
 
-pipeind = 0
+PIPE_IND = 0
 SCORE_GOAL = 100
 FPS = 3000
 SCREENWIDTH = 288

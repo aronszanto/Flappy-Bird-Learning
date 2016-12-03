@@ -1,5 +1,7 @@
-import util
+import structs
 import flappy
+import node_util
+
 
 class Fringe:
 
@@ -18,7 +20,6 @@ class Fringe:
 
 
 def search(structure, num_pipes, cost_function=None):
-    import node_util
     if cost_function is None:
         cost_function = lambda successor: 0
 
@@ -55,28 +56,12 @@ def search(structure, num_pipes, cost_function=None):
                     fringe.push((successor[0], newpath), visited[
                                 cur[0]], cost_function(successor))
 
-from node_util import IMAGES, PIPEGAPSIZE, initialize
 
 def heuristic(state):
     state = state[0]
-    playerMidPos = state.x + IMAGES['player'][0].get_width() / 2
+    playerMidPos = state.x + node_util.IMAGES['player'][0].get_width() / 2
     for upipe, lpipe in zip(state.upipes, state.lpipes):
-        pipeMidPos = upipe['x'] + IMAGES['pipe'][0].get_width() / 2
+        pipeMidPos = upipe['x'] + node_util.IMAGES['pipe'][0].get_width() / 2
         if pipeMidPos > playerMidPos:
-            y_coord = lpipe['y'] - PIPEGAPSIZE + 37
+            y_coord = lpipe['y'] - node_util.PIPEGAPSIZE + 37
             return abs(state.y - y_coord) + abs(state.x - pipeMidPos) - (state.score * 1000)
-initialize()
-actionList = search(util.PriorityQueue, 450, lambda successor: heuristic(successor))
-flappy.main(actionList[0])
-
-# from time import time
-# with open("timing.out", 'w') as f:
-#     i = 20
-#     while i <= 450:
-#         start = time()
-#         s = search(util.PriorityQueue, i, lambda successor: heuristic(successor))
-#         num_expanded = s[1]
-#         length = len(s[0])
-#         # f.write(str(i) + ',' + str(time() - start) + ',' + str(num_expanded) + '\n')
-#         print i, str(time() - start) + ',' + str(num_expanded) + ',' + str(length) + ',' + str(float(num_expanded)/length)
-#         i += 20
