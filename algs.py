@@ -1,5 +1,5 @@
 import util
-
+import flappy
 
 class Fringe:
 
@@ -38,9 +38,6 @@ def search(structure, num_pipes, cost_function=None):
     while not fringe.isEmpty():
         called += 1
         cur = fringe.pop()
-        # if called % 5 == 0:
-        # #     print called, cur
-        #     print heuristic(cur)
         if node_util.isGoalState(cur[0], num_pipes):
             return cur[1], called
         else:
@@ -70,8 +67,7 @@ def heuristic(state):
             return abs(state.y - y_coord) + abs(state.x - pipeMidPos) - (state.score * 1000)
 initialize()
 actionList = search(util.PriorityQueue, 450, lambda successor: heuristic(successor))
-import flappy_follow
-flappy_follow.main(actionList[0])
+flappy.main(actionList[0])
 
 # from time import time
 # with open("timing.out", 'w') as f:

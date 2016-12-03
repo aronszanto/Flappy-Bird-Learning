@@ -1,13 +1,16 @@
 from itertools import cycle
 import random
 import sys
-
+from pipes import PIPES
 import pygame
 from pygame.locals import *
 
 
+pipeind = 0
+
+
 FPS = 3000
-SCREENWIDTH  = 288
+SCREENWIDTH = 288
 SCREENHEIGHT = 512
 # amount by which base can maximum shift to left
 PIPEGAPSIZE  = 100 # gap between upper and lower part of pipe
@@ -17,31 +20,19 @@ IMAGES, SOUNDS, HITMASKS = {}, {}, {}
 
 # list of all possible players (tuple of 3 positions of flap)
 PLAYERS_LIST = (
-    # red bird
-    (
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
-    ),
+
     # blue bird
     (
-        # amount by which base can maximum shift to left
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
-    ),
-    # yellow bird
-    (
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
+        'assets/sprites/bluebird-upflap.png',
+        'assets/sprites/bluebird-midflap.png',
+        'assets/sprites/bluebird-downflap.png',
     ),
 )
+
 
 # list of backgrounds
 BACKGROUNDS_LIST = (
     'assets/sprites/background-day.png',
-    'assets/sprites/background-night.png',
 )
 
 # list of pipes
@@ -51,7 +42,7 @@ PIPES_LIST = (
 )
 
 
-def main():
+def main(actionList):
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -125,12 +116,12 @@ def main():
             getHitmask(IMAGES['player'][2]),
         )
 
-        movementInfo = showWelcomeAnimation()
-        crashInfo = mainGame(movementInfo)
+        movementInfo = showWelcomeAnimation(actionList)
+        crashInfo = mainGame(movementInfo, actionList)
         showGameOverScreen(crashInfo)
 
 
-def showWelcomeAnimation():
+def showWelcomeAnimation(actionList):
     """Shows welcome screen animation of flappy bird"""
     # index of player to blit on screen
     playerIndex = 0
@@ -151,19 +142,21 @@ def showWelcomeAnimation():
     # player shm for up-down motion on welcome screen
     playerShmVals = {'val': 0, 'dir': 1}
 
-    while True:
-        for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-                pygame.quit()
-                sys.exit()
-            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                # make first flap sound and return values for mainGame
-                SOUNDS['wing'].play()
-                return {
-                    'playery': playery + playerShmVals['val'],
-                    'basex': basex,
-                    'playerIndexGen': playerIndexGen,
-                }
+    if not actionList:
+        while True:
+            for event in pygame.event.get():
+                if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+                    pygame.quit()
+                    sys.exit()
+                if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+                    # make first flap sound and return values for mainGame
+                    SOUNDS['wing'].play()
+                    return {
+                        'playery': playery + playerShmVals['val'],
+                        'basex': basex,
+                        'playerIndexGen': playerIndexGen,
+                    }
+    else:
 
         # adjust playery, playerIndex, basex
         if (loopIter + 1) % 5 == 0:
@@ -181,9 +174,14 @@ def showWelcomeAnimation():
 
         pygame.display.update()
         FPSCLOCK.tick(FPS)
+        return {
+            'playery': playery + playerShmVals['val'],
+            'basex': basex,
+            'playerIndexGen': playerIndexGen,
+        }
 
 
-def mainGame(movementInfo):
+def mainGame(movementInfo, actionList):
     score = playerIndex = loopIter = 0
     playerIndexGen = movementInfo['playerIndexGen']
     playerx, playery = int(SCREENWIDTH * 0.2), movementInfo['playery']
@@ -192,8 +190,8 @@ def mainGame(movementInfo):
     baseShift = IMAGES['base'].get_width() - IMAGES['background'].get_width()
 
     # get 2 new pipes to add to upperPipes lowerPipes list
-    newPipe1 = getRandomPipe()
-    newPipe2 = getRandomPipe()
+    newPipe1 = getPipe() if actionList else getRandomPipe()
+    newPipe2 = getPipe() if actionList else getRandomPipe()
 
     # list of upper pipes
     upperPipes = [
@@ -216,8 +214,8 @@ def mainGame(movementInfo):
     playerAccY    =   1   # players downward accleration
     playerFlapAcc =  -9   # players speed on flapping
     playerFlapped = False # True when player flaps
-
-
+    action_list = actionList
+    actionind = 0
     while True:
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -227,10 +225,19 @@ def mainGame(movementInfo):
                 if playery > -2 * IMAGES['player'][0].get_height():
                     playerVelY = playerFlapAcc
                     playerFlapped = True
+        if actionind < len(action_list) and action_list[actionind]:
+            if playery > -2 * IMAGES['player'][0].get_height():
+                playerVelY = playerFlapAcc
+                playerFlapped = True
+        actionind += 1
+
+
 
         # check for crash here
         crashTest = checkCrash({'x': playerx, 'y': playery, 'index': playerIndex},
                                upperPipes, lowerPipes)
+
+        # TODO Almost certainly need this for normal play
         if crashTest[0]:
             return {
                 'y': playery,
@@ -271,7 +278,7 @@ def mainGame(movementInfo):
 
         # add new pipe when first pipe is about to touch left of screen
         if 0 < upperPipes[0]['x'] < 5:
-            newPipe = getRandomPipe()
+            newPipe = getPipe() if actionList else getRandomPipe()
             upperPipes.append(newPipe[0])
             lowerPipes.append(newPipe[1])
 
@@ -369,6 +376,14 @@ def getRandomPipe():
         {'x': pipeX, 'y': gapY - pipeHeight},  # upper pipe
         {'x': pipeX, 'y': gapY + PIPEGAPSIZE}, # lower pipe
     ]
+
+
+def getPipe():
+    global pipeind
+    """returns the next pipe from the master list"""
+    p = PIPES[pipeind]
+    pipeind += 1
+    return p
 
 
 def showScore(score):
