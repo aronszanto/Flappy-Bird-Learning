@@ -205,13 +205,16 @@ def mainGame(movementInfo, action_list=None):
                     playerFlapped = True
             actionind += 1
 
-        # Q learning goes here
+        # Q learning agent needs to take actions...
 
         # check for crash here
         crashTest = checkCrash({'x': playerx, 'y': playery, 'index': playerIndex},
                                upperPipes, lowerPipes)
 
         if crashTest[0]:
+
+            # Q learning agent needs to evaluate the actions taken during episode
+
             return {
                 'y': playery,
                 'groundCrash': crashTest[1],
