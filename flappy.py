@@ -7,6 +7,8 @@ from pygame.locals import *
 import node_util
 import algs
 import structs
+import pickle
+import os
 
 PIPE_IND = 0
 FPS = 3000
@@ -432,5 +434,12 @@ def getHitmask(image):
 
 if __name__ == '__main__':
     node_util.initialize()
-    action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))
-    main(action_list[0])
+    if os.path.isfile('path.pkl'):
+        infile = open('path.pkl')
+        action_list = pickle.load(infile)
+    else:
+        action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))[0]
+        outfile = open('path.pkl', 'w')
+        pickle.dump(action_list, outfile)
+
+    main(action_list)
