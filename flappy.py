@@ -88,8 +88,8 @@ def main(action_list=None):
             getHitmask(IMAGES['player'][2]),
         )
 
-        movementInfo = showWelcomeAnimation(action_list)
-        crashInfo = mainGame(movementInfo, action_list)
+        movementInfo = showWelcomeAnimation(actionList=action_list)
+        crashInfo = mainGame(movementInfo, action_list=action_list)
         showGameOverScreen(crashInfo)
 
 
@@ -187,6 +187,7 @@ def mainGame(movementInfo, action_list=None):
     playerFlapAcc = -9  # players speed on flapping
     playerFlapped = False  # True when player flaps
     actionind = 0
+
     while True:
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -196,11 +197,15 @@ def mainGame(movementInfo, action_list=None):
                 if playery > -2 * IMAGES['player'][0].get_height():
                     playerVelY = playerFlapAcc
                     playerFlapped = True
-        if actionind < len(action_list) and action_list[actionind]:
-            if playery > -2 * IMAGES['player'][0].get_height():
-                playerVelY = playerFlapAcc
-                playerFlapped = True
-        actionind += 1
+
+        if action_list:
+            if actionind < len(action_list) and action_list[actionind]:
+                if playery > -2 * IMAGES['player'][0].get_height():
+                    playerVelY = playerFlapAcc
+                    playerFlapped = True
+            actionind += 1
+
+        # Q learning goes here
 
         # check for crash here
         crashTest = checkCrash({'x': playerx, 'y': playery, 'index': playerIndex},
@@ -442,4 +447,4 @@ if __name__ == '__main__':
         outfile = open('path.pkl', 'w')
         pickle.dump(action_list, outfile)
 
-    main(action_list)
+    main()
