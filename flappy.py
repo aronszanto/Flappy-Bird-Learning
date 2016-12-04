@@ -9,9 +9,10 @@ import algs
 import structs
 import pickle
 import os
+from q_learner import QLearner
 
 PIPE_IND = 0
-FPS = 3000
+FPS = 60
 SCREENWIDTH = 288
 SCREENHEIGHT = 512
 PIPE_GAP_SIZE = 100
@@ -19,7 +20,7 @@ BASE_Y = SCREENHEIGHT * 0.79
 IMAGES, SOUNDS, HITMASKS = {}, {}, {}
 
 
-def main(action_list=None):
+def main(action_list=None, agent=None):
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -88,14 +89,13 @@ def main(action_list=None):
             getHitmask(IMAGES['player'][2]),
         )
 
-        movementInfo = showWelcomeAnimation(actionList=action_list)
-        crashInfo = mainGame(movementInfo, action_list=action_list)
-        showGameOverScreen(crashInfo)
+        movementInfo = showWelcomeAnimation(actionList=action_list, agent=agent)
+        crashInfo = mainGame(movementInfo, action_list=action_list, agent=agent)
+        showGameOverScreen(crashInfo, agent=agent)
 
 
-def showWelcomeAnimation(actionList=None):
-    """Shows welcome screen animation of flappy bird"""
-    # index of player to blit on screen
+def showWelcomeAnimation(actionList=None, agent=None):
+
     playerIndex = 0
     playerIndexGen = cycle([0, 1, 2, 1])
     # iterator used to change playerIndex after every 5th iteration
@@ -116,13 +116,19 @@ def showWelcomeAnimation(actionList=None):
 
     if not actionList:
         while True:
+
+            if agent:
+                return {
+                    'playery': playery + playerShmVals['val'],
+                    'basex': basex,
+                    'playerIndexGen': playerIndexGen,
+                }
+
             for event in pygame.event.get():
                 if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                     pygame.quit()
                     sys.exit()
                 if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                    # make first flap sound and return values for mainGame
-                    SOUNDS['wing'].play()
                     return {
                         'playery': playery + playerShmVals['val'],
                         'basex': basex,
@@ -153,7 +159,7 @@ def showWelcomeAnimation(actionList=None):
         }
 
 
-def mainGame(movementInfo, action_list=None):
+def mainGame(movementInfo, action_list=None, agent=None):
     score = playerIndex = loopIter = 0
     playerIndexGen = movementInfo['playerIndexGen']
     playerx, playery = int(SCREENWIDTH * 0.2), movementInfo['playery']
@@ -189,6 +195,9 @@ def mainGame(movementInfo, action_list=None):
     actionind = 0
 
     while True:
+
+        focus = lowerPipes[0] if -playerx + lowerPipes[0]['x'] > -30 else lowerPipes[1]
+
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                 pygame.quit()
@@ -205,15 +214,21 @@ def mainGame(movementInfo, action_list=None):
                     playerFlapped = True
             actionind += 1
 
-        # Q learning agent needs to take actions...
+        if agent:
+            game_state = (-playerx + focus['x'], -playery + focus['y'], playerVelY)
+            if agent.take_action(game_state):
+                if playery > -2 * IMAGES['player'][0].get_height():
+                    playerVelY = playerFlapAcc
+                    playerFlapped = True
 
-        # check for crash here
+
         crashTest = checkCrash({'x': playerx, 'y': playery, 'index': playerIndex},
                                upperPipes, lowerPipes)
 
         if crashTest[0]:
 
-            # Q learning agent needs to evaluate the actions taken during episode
+            if agent:
+                agent.learn_from_episode()
 
             return {
                 'y': playery,
@@ -231,7 +246,6 @@ def mainGame(movementInfo, action_list=None):
             pipeMidPos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
             if pipeMidPos <= playerMidPos < pipeMidPos + 4:
                 score += 1
-                SOUNDS['point'].play()
 
         # playerIndex basex change
         if (loopIter + 1) % 3 == 0:
@@ -279,8 +293,12 @@ def mainGame(movementInfo, action_list=None):
         FPSCLOCK.tick(FPS)
 
 
-def showGameOverScreen(crashInfo):
+def showGameOverScreen(crashInfo, agent=None):
     """crashes the player down ans shows gameover image"""
+
+    if agent:
+        return
+
     score = crashInfo['score']
     playerx = SCREENWIDTH * 0.2
     playery = crashInfo['y']
@@ -291,11 +309,6 @@ def showGameOverScreen(crashInfo):
     basex = crashInfo['basex']
 
     upperPipes, lowerPipes = crashInfo['upperPipes'], crashInfo['lowerPipes']
-
-    # play hit and die sounds
-    SOUNDS['hit'].play()
-    if not crashInfo['groundCrash']:
-        SOUNDS['die'].play()
 
     while True:
         for event in pygame.event.get():
@@ -450,4 +463,4 @@ if __name__ == '__main__':
         outfile = open('path.pkl', 'w')
         pickle.dump(action_list, outfile)
 
-    main()
+    main(agent=QLearner(ld=5))

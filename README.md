@@ -1,9 +1,6 @@
 # Flaippy Bird
 
-## Informed Search
-## RL
+## TODOs
 
-### States Representations
-### Reward Functions
-### Training
-TD-lambda
+* Add command line args to define type of agent.
+* Experiment with other state representations and learning rates etc.
