@@ -196,7 +196,7 @@ def mainGame(movementInfo, action_list=None, agent=None):
 
     while True:
 
-        focus = lowerPipes[0] if -playerx + lowerPipes[0]['x'] > -30 else lowerPipes[1]
+        focus = lowerPipes[0] if lowerPipes[0]['x'] -playerx > -50 else lowerPipes[1]
 
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -213,9 +213,12 @@ def mainGame(movementInfo, action_list=None, agent=None):
                     playerVelY = playerFlapAcc
                     playerFlapped = True
             actionind += 1
-
+        # print('X: {}, Y: {} , V: {}'.format(-playerx + focus['x'], -playery + focus['y'], playerVelY))
+        # print("X: {}, Y: {}".format(focus['x'] -playerx, focus['y'] - PIPE_GAP_SIZE + 37 - playery))
         if agent:
-            game_state = (-playerx + focus['x'], -playery + focus['y'], playerVelY)
+            game_state = (focus['x'] -playerx, focus['y'] - PIPE_GAP_SIZE + 37 - playery, playerVelY)
+            # print('X: {}, Y: {} , V: {}'.format(game_state[0], game_state[1], game_state[2]))
+            # game_state = (-playerx + focus['x'], -playery + focus['y'], playerVelY)
             if agent.take_action(game_state):
                 if playery > -2 * IMAGES['player'][0].get_height():
                     playerVelY = playerFlapAcc
@@ -225,10 +228,12 @@ def mainGame(movementInfo, action_list=None, agent=None):
         crashTest = checkCrash({'x': playerx, 'y': playery, 'index': playerIndex},
                                upperPipes, lowerPipes)
 
-        if crashTest[0]:
+        if crashTest[0] or playery <= 0:  # TODO crash test should take into account that the bird can't fly off the screen
 
             if agent:
                 agent.learn_from_episode()
+                with open('scores.txt', 'w+') as score_keeping:
+                    score_keeping.write('Episode: {}, Score: {}\n'.format(agent.episodes, score))
 
             return {
                 'y': playery,
@@ -462,5 +467,4 @@ if __name__ == '__main__':
         action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))[0]
         outfile = open('path.pkl', 'w')
         pickle.dump(action_list, outfile)
-
-    main(agent=QLearner(ld=5))
+    main(agent=QLearner(ld=2))
