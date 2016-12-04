@@ -13,21 +13,21 @@ class QLearner:
         self.q_values = self.import_q_values(path) if path else defaultdict(float)
         self.epsilon = epsilon
         self.alpha = 0.8
-        self.gamma = 0.6
+        self.gamma = 0.8
         self.actions = list([FALL, FLAP])
         self.episodes = 0
         self.history = list()
         self.ld = ld
         self.y_unit = 30  # [-125, 160] potential values
         self.x_unit = 40  # [30, 430] potential values
-        self.v_unit = 2   # [-10. 10] potential values
-        self.death_value = -1000.0
-        self.dump_interval = 50
+        self.v_unit = 1   # [-10, 10] potential values
+        self.death_value = -4000.0
+        self.dump_interval = 200
         self.max_episodes = 3000
-        self.reporting_interval = 10
+        self.reporting_interval = 25
 
     def get_current_epsilon(self):
-        return 0.5 / (self.episodes + 1.0) if not self.epsilon else self.epsilon
+        return 1.0 / (self.episodes + 1.0) if not self.epsilon else self.epsilon
 
     def off_policy(self):
         """
@@ -38,7 +38,7 @@ class QLearner:
     def import_q_values(self, path):
         if os.path.isfile(path):
             with open(path) as infile:
-                self.q_values = pickle.load(infile)
+                return pickle.load(infile)
 
     def dump_q_values(self, path):
         with open(path, 'w') as outfile:
@@ -63,14 +63,17 @@ class QLearner:
 
     def calculate_reward(self, state, n=1.0):
 
+        # TODO Additionally penalize jumps more than falls, since bird has tendency to jump upwards to its death?
+
         if not state:  # Previous state preceded a crash
             return self.death_value / n
 
         reward = 1.0  # Standard reward for staying alive
 
         rel_x, rel_y = state[0], state[1]
-        if -20 <= rel_y <= 20:# and rel_x < 100:
+        if -35 <= rel_y <= 35:
             reward = 25.0 if rel_x > 100 else 50.0  # Reward for staying close to the midpoint of the next pipes
+
         # elif -40 <= rel_y <= 40 and rel_x < 50:
         #     reward = 15.0  # As above, but with a little more leeway
         # elif rel_y < -40:
