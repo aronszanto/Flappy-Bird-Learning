@@ -1,3 +1,4 @@
+from __future__ import division
 from collections import defaultdict
 import random
 import os
@@ -9,7 +10,7 @@ FALL, FLAP = 0, 1
 
 class QLearner:
 
-    def __init__(self, path=None, ld=0, epsilon=0.025):
+    def __init__(self, path=None, ld=0, epsilon=0.01):
         self.q_values = self.import_q_values(path) if path else defaultdict(float)
         self.epsilon = epsilon
         self.alpha = 0.8
@@ -21,15 +22,15 @@ class QLearner:
         # Note: Bird has height 24, width 34.
         self.y_unit = 15  # [-125, 160] potential values
         self.x_unit = 30  # [30, 430] potential values
-        self.v_unit = 1   # [-10, 10] potential values
-        self.death_value = -4000.0
+        self.v_unit = 2   # [-10, 10] potential values
+        self.death_value = -1
         self.dump_interval = 200
-        self.max_episodes = 3000
+        self.max_episodes = 1500
         self.reporting_interval = 5
 
     def get_current_epsilon(self):
         # return 1.0 / (self.episodes + 1.0) if not self.epsilon else self.epsilon
-        return max(1.0 / (self.episodes + 1.0), self.epsilon)
+        return max(0.05 * (self.max_episodes - self.episodes) / self.max_episodes, self.epsilon)
 
     def off_policy(self):
         """
@@ -80,14 +81,14 @@ class QLearner:
 
         # Reward for staying close to the midpoints of the pipes when at various horizontal distances away
         if abs(rel_y) <= 40:
-            # if rel_x <= 200:
-            #     reward = 1.0
-            # if rel_x <= 100:
-            #     reward = 2.0
-            # if rel_x <= 10:
-            #     reward = 5.0
-            if rel_x <= -30:
-                return 1.0
+            if rel_x <= 100:
+                reward = 1.0
+            if rel_x <= 50:
+                reward = 2.0
+            if rel_x <= 0:
+                reward = 5.0
+            if rel_x <= -60:  # Score point in actual game
+                return 10
 
         return reward / n  # Sharing the reward with n - 1 previous states...
 
@@ -98,7 +99,13 @@ class QLearner:
 
     def assign_credit(self, t, n):
 
+        # TODO If the bird dies near the gap, it's due to a more recent action.
+        # TODO If it does far from the gap, it's probably a longer sequence of actions.
+
         s_ = self.history[t + 1][0] if t + 1 < len(self.history) else None
+        if not s_:
+            n = min(2, n)  # Typically when the bird dies it's due to a more recent action...
+
         r = self.calculate_reward(s_, n=n)
 
         for t_ in range(t, t - n, -1):
@@ -128,8 +135,8 @@ class QLearner:
     def extract_state(self, x_offset, y_offset, y_vel):
 
         # Grid is more spread out relatively further from the center of the gap
-        x_offset -= x_offset % 10 if x_offset <= 150 else x_offset % 50
-        y_offset -= y_offset % 10 if abs(y_offset) <= 80 else y_offset % 30
+        x_offset -= x_offset % 20 if x_offset <= 150 else x_offset % 50
+        y_offset -= y_offset % 20 if abs(y_offset) <= 80 else y_offset % 30
 
         return (
                 x_offset,# - x_offset % self.x_unit,
