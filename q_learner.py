@@ -64,17 +64,20 @@ class QLearner:
 
     def calculate_reward(self, state, n=1.0):
 
-        # TODO Additionally penalize jumps more than falls, since bird has tendency to jump upwards to its death?
-        # TODO Consider limiting the number of conecutive jumps and adding a get_legal_actions() method which rate limits
-
         if not state:  # Previous state preceded a crash
             return self.death_value / n
 
-        reward = 1.0  # Standard reward for staying alive
+        """
+        The bird shouldn't be rewarded for simply staying alive. This associates small positive scores with pointless flaps and falls
+        across many states making it harder to learn an effective policy when encountering new states.
+
+        TODO Consider limiting the number of flaps in a given period using some sort of get_legal_actions() function.
+        """
+        reward = 0.0
 
         rel_x, rel_y = state[0], state[1]
-        if abs(rel_y) <= 40 and rel_x <= 100:  # Reward for staying close to the midpoint of the next pipes
-            reward = 10.0
+        if abs(rel_y) <= 40 and rel_x <= 100:  # Reward for staying close to the midpoint of the next pipes when
+            reward = 1.0 if rel_x > 0 else 10.
 
         return reward / n  # Sharing the reward with n - 1 previous states...
 
