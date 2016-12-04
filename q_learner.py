@@ -9,9 +9,9 @@ FALL, FLAP = 0, 1
 
 class QLearner:
 
-    def __init__(self, path=None, ld=0):
+    def __init__(self, path=None, ld=0, epsilon=0.04):
         self.q_values = self.import_q_values(path) if path else defaultdict(float)
-        self.epsilon = 0.04
+        self.epsilon = epsilon
         self.alpha = 0.8
         self.gamma = 0.6
         self.actions = list([FALL, FLAP])
@@ -20,14 +20,20 @@ class QLearner:
         self.ld = ld
         self.y_unit = 30  # [-125, 160] potential values
         self.x_unit = 40  # [30, 430] potential values
-        self.v_unit = 1   # [-10. 10] potential values
+        self.v_unit = 2   # [-10. 10] potential values
         self.death_value = -1000.0
         self.dump_interval = 50
         self.max_episodes = 3000
+        self.reporting_interval = 10
+
+    def get_current_epsilon(self):
+        return 0.5 / (self.episodes + 1.0) if not self.epsilon else self.epsilon
 
     def off_policy(self):
-        # TODO exponential cooling
-        return random.random() < self.epsilon
+        """
+        Note: self.epsilon >= 0.1 appears to force the bird into the ceiling
+        """
+        return random.random() < self.get_current_epsilon()
 
     def import_q_values(self, path):
         if os.path.isfile(path):
@@ -45,7 +51,6 @@ class QLearner:
         self.q_values[state, action] = q_
 
     def get_value(self, state):
-        # TODO What should value of a terminal state be?
         return max([self.get_q_value(state, action) for action in self.actions]) if state else 0
 
     def get_greedy_action(self, state):
@@ -64,10 +69,12 @@ class QLearner:
         reward = 1.0  # Standard reward for staying alive
 
         rel_x, rel_y = state[0], state[1]
-        if -20 <= rel_y <= 20 and rel_x < 50:
-            reward = 25.0  # Reward for staying close to the midpoint the next pipes
-        elif -40 <= rel_y <= 40 and rel_x < 50:
-            reward = 15.0  # As above, but with a little more leeway
+        if -20 <= rel_y <= 20:# and rel_x < 100:
+            reward = 25.0 if rel_x > 100 else 50.0  # Reward for staying close to the midpoint of the next pipes
+        # elif -40 <= rel_y <= 40 and rel_x < 50:
+        #     reward = 15.0  # As above, but with a little more leeway
+        # elif rel_y < -40:
+        #     reward = -25
 
         return reward / n  # Sharing the reward with n - 1 previous states...
 
@@ -95,8 +102,11 @@ class QLearner:
         self.history = list()
         self.episodes += 1
 
+        if self.episodes % self.reporting_interval == 0:
+            print("{} episodes complete; {} states instantiated, {} exploration factor".format(self.episodes,
+                                                                                               len(self.q_values),
+                                                                                               self.get_current_epsilon()))
         if self.episodes % self.dump_interval == 0:
-            print("{} episodes complete; {} states instantiated".format(self.episodes, len(self.q_values)))
             self.dump_q_values("training.pkl")
 
         if self.episodes == self.max_episodes + 1:

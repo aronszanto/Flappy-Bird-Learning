@@ -196,7 +196,7 @@ def mainGame(movementInfo, action_list=None, agent=None):
 
     while True:
 
-        focus = lowerPipes[0] if lowerPipes[0]['x'] -playerx > -50 else lowerPipes[1]
+        focus = lowerPipes[0] if lowerPipes[0]['x'] -playerx > -30 else lowerPipes[1]
 
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -467,4 +467,4 @@ if __name__ == '__main__':
         action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))[0]
         outfile = open('path.pkl', 'w')
         pickle.dump(action_list, outfile)
-    main(agent=QLearner(ld=1))
+    main(agent=QLearner(ld=1, epsilon=None))
