@@ -18,11 +18,10 @@ class QLearner:
         self.episodes = 0
         self.history = list()
         self.ld = ld
-        # TODO Consider making the grid larger for values at the extremes of this range... And finer (down to the size of the bird)
-        # closer to the pipes. Bird has height 24, width 34.
+        # Note: Bird has height 24, width 34.
         self.y_unit = 15  # [-125, 160] potential values
         self.x_unit = 30  # [30, 430] potential values
-        self.v_unit = 1.5   # [-10, 10] potential values
+        self.v_unit = 1   # [-10, 10] potential values
         self.death_value = -4000.0
         self.dump_interval = 200
         self.max_episodes = 3000
@@ -66,6 +65,7 @@ class QLearner:
     def calculate_reward(self, state, n=1.0):
 
         # TODO Additionally penalize jumps more than falls, since bird has tendency to jump upwards to its death?
+        # TODO Consider limiting the number of conecutive jumps and adding a get_legal_actions() method which rate limits
 
         if not state:  # Previous state preceded a crash
             return self.death_value / n
@@ -73,13 +73,8 @@ class QLearner:
         reward = 1.0  # Standard reward for staying alive
 
         rel_x, rel_y = state[0], state[1]
-        if -35 <= rel_y <= 35:
-            reward = 25.0 if rel_x > 100 else 50.0  # Reward for staying close to the midpoint of the next pipes
-
-        # elif -40 <= rel_y <= 40 and rel_x < 50:
-        #     reward = 15.0  # As above, but with a little more leeway
-        # elif rel_y < -40:
-        #     reward = -25
+        if abs(rel_y) <= 40 and rel_x <= 100:  # Reward for staying close to the midpoint of the next pipes
+            reward = 10.0
 
         return reward / n  # Sharing the reward with n - 1 previous states...
 
