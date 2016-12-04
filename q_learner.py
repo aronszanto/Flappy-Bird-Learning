@@ -11,9 +11,9 @@ class QLearner:
 
     def __init__(self, path=None, ld=0):
         self.q_values = self.import_q_values(path) if path else defaultdict(float)
-        self.epsilon = 0.01
-        self.alpha = 1
-        self.gamma = 1
+        self.epsilon = 0.04
+        self.alpha = 0.8
+        self.gamma = 0.6
         self.actions = list([FALL, FLAP])
         self.episodes = 0
         self.history = list()
@@ -21,7 +21,7 @@ class QLearner:
         self.y_unit = 30  # [-125, 160] potential values
         self.x_unit = 40  # [30, 430] potential values
         self.v_unit = 1   # [-10. 10] potential values
-        self.death_value = -1000
+        self.death_value = -1000.0
         self.dump_interval = 50
         self.max_episodes = 3000
 
@@ -58,30 +58,32 @@ class QLearner:
 
     def calculate_reward(self, state, n=1.0):
 
-        reward = 1.0
+        if not state:  # Previous state preceded a crash
+            return self.death_value / n
 
-        if not state:
-            reward = self.death_value
+        reward = 1.0  # Standard reward for staying alive
 
-        rel_y = state[1]
-        if -20 <= rel_y <= 20:
-            reward = 25.0
-        elif -40 <= rel_y <= 40:
-            reward = 15.0
+        rel_x, rel_y = state[0], state[1]
+        if -20 <= rel_y <= 20 and rel_x < 50:
+            reward = 25.0  # Reward for staying close to the midpoint the next pipes
+        elif -40 <= rel_y <= 40 and rel_x < 50:
+            reward = 15.0  # As above, but with a little more leeway
 
-        return reward * n
+        return reward / n  # Sharing the reward with n - 1 previous states...
 
-    def update(self, state, action, next_state, n=1.0):
-        reward = self.calculate_reward(next_state, n=n)
+    def update(self, state, action, next_state, reward):
         q = self.get_q_value(state, action)
         q_ = q + self.alpha * (reward + self.gamma * self.get_value(next_state) - q)
         self.set_q_value(state, action, q_)
 
     def assign_credit(self, t, n):
+
+        s_ = self.history[t + 1][0] if t + 1 < len(self.history) else None
+        r = self.calculate_reward(s_, n=n)
+
         for t_ in range(t, t - n, -1):
             s, a = self.history[t_]
-            s_ = self.history[t_ + 1][0] if t_ + 1 < len(self.history) else None
-            self.update(s, a, s_, n=n)
+            self.update(s, a, s_, r)
 
     def learn_from_episode(self):
         num_actions = len(self.history)
@@ -94,6 +96,7 @@ class QLearner:
         self.episodes += 1
 
         if self.episodes % self.dump_interval == 0:
+            print("{} episodes complete; {} states instantiated".format(self.episodes, len(self.q_values)))
             self.dump_q_values("training.pkl")
 
         if self.episodes == self.max_episodes + 1:
