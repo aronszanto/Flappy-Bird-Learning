@@ -232,7 +232,7 @@ def mainGame(movementInfo, action_list=None, agent=None):
 
             if agent:
                 agent.learn_from_episode()
-                with open('scores.txt', 'w+') as score_keeping:
+                with open('scores.txt', 'a') as score_keeping:
                     score_keeping.write('Episode: {}, Score: {}\n'.format(agent.episodes, score))
 
             return {
@@ -467,4 +467,4 @@ if __name__ == '__main__':
         action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))[0]
         outfile = open('path.pkl', 'w')
         pickle.dump(action_list, outfile)
-    main(agent=QLearner(ld=2))
+    main(agent=QLearner())
