@@ -9,11 +9,11 @@ FALL, FLAP = 0, 1
 
 class QLearner:
 
-    def __init__(self, path=None, ld=0, epsilon=0.04):
+    def __init__(self, path=None, ld=0, epsilon=0.025):
         self.q_values = self.import_q_values(path) if path else defaultdict(float)
         self.epsilon = epsilon
         self.alpha = 0.8
-        self.gamma = 0.8
+        self.gamma = 1
         self.actions = list([FALL, FLAP])
         self.episodes = 0
         self.history = list()
@@ -28,7 +28,8 @@ class QLearner:
         self.reporting_interval = 5
 
     def get_current_epsilon(self):
-        return 1.0 / (self.episodes + 1.0) if not self.epsilon else self.epsilon
+        # return 1.0 / (self.episodes + 1.0) if not self.epsilon else self.epsilon
+        return max(1.0 / (self.episodes + 1.0), self.epsilon)
 
     def off_policy(self):
         """
@@ -76,8 +77,17 @@ class QLearner:
         reward = 0.0
 
         rel_x, rel_y = state[0], state[1]
-        if abs(rel_y) <= 40 and rel_x <= 100:  # Reward for staying close to the midpoint of the next pipes when
-            reward = 1.0 if rel_x > 0 else 10.
+
+        # Reward for staying close to the midpoints of the pipes when at various horizontal distances away
+        if abs(rel_y) <= 40:
+            # if rel_x <= 200:
+            #     reward = 1.0
+            # if rel_x <= 100:
+            #     reward = 2.0
+            # if rel_x <= 10:
+            #     reward = 5.0
+            if rel_x <= -30:
+                return 1.0
 
         return reward / n  # Sharing the reward with n - 1 previous states...
 
