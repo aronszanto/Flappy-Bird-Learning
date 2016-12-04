@@ -213,12 +213,15 @@ def mainGame(movementInfo, action_list=None, agent=None):
                     playerVelY = playerFlapAcc
                     playerFlapped = True
             actionind += 1
-        # print('X: {}, Y: {} , V: {}'.format(-playerx + focus['x'], -playery + focus['y'], playerVelY))
-        # print("X: {}, Y: {}".format(focus['x'] -playerx, focus['y'] - PIPE_GAP_SIZE + 37 - playery))
+
         if agent:
-            game_state = (focus['x'] -playerx, focus['y'] - PIPE_GAP_SIZE + 37 - playery, playerVelY)
-            # print('X: {}, Y: {} , V: {}'.format(game_state[0], game_state[1], game_state[2]))
-            # game_state = (-playerx + focus['x'], -playery + focus['y'], playerVelY)
+            """
+            TODO game_state intended to be the...
+            - horizontal offset from the player's RHS to the midpoint of the pipe gap
+            - vertical offset from the player's midpoint to the midpoint of the pipe gap
+            - vertical velocity
+            """
+            game_state = (focus['x'] - (playerx + 34), focus['y'] - PIPE_GAP_SIZE / 2 - (playery + 12), playerVelY)
             if agent.take_action(game_state):
                 if playery > -2 * IMAGES['player'][0].get_height():
                     playerVelY = playerFlapAcc

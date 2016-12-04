@@ -18,13 +18,15 @@ class QLearner:
         self.episodes = 0
         self.history = list()
         self.ld = ld
-        self.y_unit = 30  # [-125, 160] potential values
-        self.x_unit = 40  # [30, 430] potential values
-        self.v_unit = 1   # [-10, 10] potential values
+        # TODO Consider making the grid larger for values at the extremes of this range... And finer (down to the size of the bird)
+        # closer to the pipes. Bird has height 24, width 34.
+        self.y_unit = 15  # [-125, 160] potential values
+        self.x_unit = 30  # [30, 430] potential values
+        self.v_unit = 1.5   # [-10, 10] potential values
         self.death_value = -4000.0
         self.dump_interval = 200
         self.max_episodes = 3000
-        self.reporting_interval = 25
+        self.reporting_interval = 5
 
     def get_current_epsilon(self):
         return 1.0 / (self.episodes + 1.0) if not self.epsilon else self.epsilon
@@ -116,12 +118,18 @@ class QLearner:
             sys.exit()
 
     def extract_state(self, x_offset, y_offset, y_vel):
+
+        # Grid is more spread out relatively further from the center of the gap
+        x_offset -= x_offset % 10 if x_offset <= 150 else x_offset % 50
+        y_offset -= y_offset % 10 if abs(y_offset) <= 80 else y_offset % 30
+
         return (
-                x_offset - x_offset % self.x_unit,
-                y_offset - y_offset % self.y_unit,
+                x_offset,# - x_offset % self.x_unit,
+                y_offset,# - y_offset % self.y_unit,
                 y_vel - y_vel % self.v_unit,
                )
 
     def take_action(self, game_state):
         state = self.extract_state(*game_state)
-        return self.get_action(state)
+        action = self.get_action(state)
+        return action
