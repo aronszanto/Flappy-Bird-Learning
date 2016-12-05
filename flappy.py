@@ -457,4 +457,4 @@ if __name__ == '__main__':
         action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))[0]
         outfile = open('path.pkl', 'w')
         pickle.dump(action_list, outfile)
-    main(agent=QLearner(ld=1))
+    main(agent=QLearner(ld=4))
