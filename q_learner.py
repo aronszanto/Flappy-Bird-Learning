@@ -70,13 +70,10 @@ class QLearner:
         """
         rel_x, rel_y = state[0], state[1]
 
+        # It is possible to reward the bird for staying in line with the gap, too... But not sure if it makes a difference. 
         if rel_x <= 150:
             return 1.0
 
-        # if rel_x <= 150 or abs(rel_y) <= 40:
-        #     return 1.0
-        # if rel_x <= -60 and abs(rel_y) <= 20:
-        #     return 10.0
         return 0.0
 
     def update(self, state, action, next_state, reward):
