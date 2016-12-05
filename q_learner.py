@@ -49,7 +49,7 @@ class QLearner:
 
     def get_value(self, state):
         # Assumes terminal states have value == -10
-        return max([self.get_q_value(state, action) for action in self.actions]) if state else -10.0
+        return max([self.get_q_value(state, action) for action in self.actions]) if state else -100.0
 
     def get_greedy_action(self, state):
         return FALL if self.get_q_value(state, FALL) >= self.get_q_value(state, FLAP) else FLAP
@@ -61,7 +61,7 @@ class QLearner:
 
     def calculate_reward(self, state):
         if not state:  # Previous state preceded a crash
-            return -10.0
+            return -100.0
         """
         The bird shouldn't be rewarded for simply staying alive. This associates small positive scores with pointless flaps and falls
         across many states making it harder to learn an effective policy when encountering new states.
@@ -70,10 +70,14 @@ class QLearner:
         """
         rel_x, rel_y = state[0], state[1]
 
-        # It is possible to reward the bird for staying in line with the gap, too... But not sure if it makes a difference. 
-        if rel_x <= 150:
-            return 1.0
+        if rel_x <= 200:
 
+            if abs(rel_y) <= 20:  # Reward for staying in line with gap
+                return 5.0
+
+            return 1.0  # Standard reward for staying alive, given that we've past the first pipe.
+
+        # Initial reward at beginning of game to avoid bird flying into ceiling constantly.
         return 0.0
 
     def update(self, state, action, next_state, reward):
@@ -84,8 +88,14 @@ class QLearner:
     def assign_credit(self, t, n):
 
         s_ = self.history[t + 1][0] if t + 1 < len(self.history) else None
-        r = self.calculate_reward(s_)
 
+        if not s_:  # Additionally punish previous q-state if flapped into oblivion
+            s, a = self.history[t]
+            if a == FLAP:
+                self.update(s, a, s_, -1000.0)
+
+        # Assign credit to current, and previous n - 1 q-states
+        r = self.calculate_reward(s_)
         for t_ in range(t, t - n, -1):
             s, a = self.history[t_]
             self.update(s, a, s_, r)
@@ -120,8 +130,8 @@ class QLearner:
         :param y_offset: relative vertical distance from bird's midpoint to gap midpoint
         :param y_vel: vertical velocity
         """
-        x_offset -= x_offset % 10 if x_offset <= 150 else x_offset % 100
-        y_offset -= y_offset % 10 if abs(y_offset) <= 80 else y_offset % 100
+        x_offset -= x_offset % 10 if x_offset <= 100 else x_offset % 100
+        y_offset -= y_offset % 10 if abs(y_offset) <= 150 else y_offset % 100
         return x_offset, y_offset, y_vel
 
     def take_action(self, game_state):
