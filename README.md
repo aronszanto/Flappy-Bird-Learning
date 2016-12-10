@@ -1,28 +1,14 @@
-FlappyBirdClone
-===============
+# Flaippy Bird
 
-A Flappy Bird Clone made using [python-pygame][1]
+## TODOs
 
-How-to
-------
+* Add command line args to define type of agent.
+* Experiment with other state representations and learning rates etc.
+* The Q learner has a tendency to flap upwards into the top of the screen. Not sure what causes this behavior, but it's super annoying. It appears to happen when the agent is in the top half of the pipe gap as it approaches.
 
-1. Install Python 2.7.X from [here](https://www.python.org/download/releases/)
-
-2. Install PyGame 1.9.X from [here](http://www.pygame.org/download.shtml)
-
-3. Clone this repository: `git clone https://github.com/sourabhv/FlappyBirdClone.git` or click `Download ZIP` in right panel and extract it.
-
-4. Run `python flappy.py` from the repo's directory
-
-5. use <kbd>&uarr;</kbd> or <kbd>Space</kbd> key to play and <kbd>Esc</kbd> to close the game.
-
-  (Note: Install pyGame for same version python as above)
-
-  (For x64 windows, get exe [here](http://www.lfd.uci.edu/~gohlke/pythonlibs/#pygame))
-
-ScreenShot
-----------
-
-![Flappy Bird](screenshot1.png)
-
-[1]: http://www.pygame.org
+#### You can very the behavior of the Q-learner by 
+* Changing the values of epsilon, gamma, alpha. 
+* Changing ld = lambda. This is the number of previous s, a pairs which get assigned credit uniformly for each reward. 
+* Changing the size of the state space. You can make this bigger by making the discretization units for x, y and velocity smaller. 
+* Altering the size of the rewards given to the agent for staying between the two pipes at all times. 
+* Changing the rate at which epsilon cools.

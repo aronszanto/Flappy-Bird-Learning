@@ -1,8 +1,7 @@
-import util
+import node_util
 
 
 class Fringe:
-
     def __init__(self, s):
         self.structure = s()
         assert ('push' in dir(s) and 'pop' in dir(s) and 'isEmpty' in dir(s))
@@ -18,68 +17,45 @@ class Fringe:
 
 
 def search(structure, num_pipes, cost_function=None):
-    import node_util
     if cost_function is None:
-        cost_function = lambda successor: 0
+        def cost_function():
+            return 0
 
     fringe = Fringe(structure)
-
-    # holds visited nodes
     visited = {}
-    # (k,v) pair where k = node n1, v = parent of n1
-    parent = {}
-    start = node_util.getStart(), []
-    visited[start[0]] = 0
+    start = node_util.getStart()
+    visited[start.state] = 0
 
-    for successor in node_util.getSuccessors(start[0]):
-        fringe.push((successor[0], [successor[1]]), 0, cost_function(successor))
-        visited[successor[0]] = successor[2]  # update best cost to successors
+    for successor in node_util.getSuccessors(start.state):
+        fringe.push((successor.state, [successor.flapped]), successor.cost, cost_function(successor))
+        visited[successor.state] = successor.cost  # update best cost to successors
     called = 0
     while not fringe.isEmpty():
         called += 1
         cur = fringe.pop()
-        # if called % 5 == 0:
-        # #     print called, cur
-        #     print heuristic(cur)
         if node_util.isGoalState(cur[0], num_pipes):
             return cur[1], called
         else:
             for successor in node_util.getSuccessors(cur[0]):
-                if successor[0] in visited and visited[successor[0]] > (visited[cur[0]] + successor[2]):
-                    curpath=cur[1]
-                    newpath=curpath + [successor[1]]
-                    fringe.push((successor[0], newpath), visited[
-                                cur[0]], cost_function(successor))
-                    visited[successor[0]]=visited[cur[0]] + successor[2]
-                elif successor[0] not in visited:
-                    curpath=cur[1]
-                    newpath=curpath + [successor[1]]
-                    visited[successor[0]]=visited[cur[0]] + successor[2]
-                    fringe.push((successor[0], newpath), visited[
-                                cur[0]], cost_function(successor))
-from node_util import IMAGES, PIPEGAPSIZE, initialize
+                if successor.state in visited and visited[successor.state] > (visited[cur[0]] + successor.cost):
+                    curpath = cur[1]
+                    newpath = curpath + [successor.flapped]
+                    fringe.push((successor.state, newpath), visited[
+                        cur[0]], cost_function(successor))
+                    visited[successor.state] = visited[cur[0]] + successor.cost
+                elif successor.state not in visited:
+                    curpath = cur[1]
+                    newpath = curpath + [successor.flapped]
+                    visited[successor.state] = visited[cur[0]] + successor.cost
+                    fringe.push((successor.state, newpath), visited[
+                        cur[0]], cost_function(successor))
+
 
 def heuristic(state):
-    state = state[0]
-    playerMidPos = state.x + IMAGES['player'][0].get_width() / 2
+    state = state.state
+    playerMidPos = state.x + node_util.IMAGES['player'][0].get_width() / 2
     for upipe, lpipe in zip(state.upipes, state.lpipes):
-        pipeMidPos = upipe['x'] + IMAGES['pipe'][0].get_width() / 2
+        pipeMidPos = upipe['x'] + node_util.IMAGES['pipe'][0].get_width() / 2
         if pipeMidPos > playerMidPos:
-            y_coord = lpipe['y'] - PIPEGAPSIZE + 37
+            y_coord = lpipe['y'] - node_util.PIPE_GAP_SIZE + 37
             return abs(state.y - y_coord) + abs(state.x - pipeMidPos) - (state.score * 1000)
-initialize()
-actionList = search(util.PriorityQueue, 10, lambda successor: heuristic(successor))
-import flappy_follow
-flappy_follow.main(actionList[0])
-
-# from time import time
-# with open("timing.out", 'w') as f:
-#     i = 20
-#     while i <= 450:
-#         start = time()
-#         s = search(util.PriorityQueue, i, lambda successor: heuristic(successor))
-#         num_expanded = s[1]
-#         length = len(s[0])
-#         # f.write(str(i) + ',' + str(time() - start) + ',' + str(num_expanded) + '\n')
-#         print i, str(time() - start) + ',' + str(num_expanded) + ',' + str(length) + ',' + str(float(num_expanded)/length)
-#         i += 20
