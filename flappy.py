@@ -252,12 +252,6 @@ def main_game(movement_info, action_list=None, agent=None):
             action_ind += 1
 
         if agent:
-            """
-            TODO game_state intended to be the...
-            - horizontal offset from the player's RHS to the midpoint of the pipe gap
-            - vertical offset from the player's midpoint to the midpoint of the pipe gap
-            - vertical velocity
-            """
             game_state = (focus['x'] - (player_x + 34), focus['y'] - PIPE_GAP_SIZE / 2 - (player_y + 12), player_vel_y)
             if agent.take_action(game_state):
                 if player_y > -2 * IMAGES['player'][0].get_height():
@@ -267,8 +261,8 @@ def main_game(movement_info, action_list=None, agent=None):
         crashTest = check_crash({'x': player_x, 'y': player_y, 'index': player_index},
                                 upper_pipes, lower_pipes)
 
-        if crashTest[
-            0] or player_y <= 0:  # TODO crash test should take into account that the bird can't fly off the screen
+        # TODO crash test should take into account that the bird can't fly off the screen
+        if crashTest[0] or player_y <= 0:
 
             if agent:
                 agent.learn_from_episode()
@@ -503,4 +497,8 @@ if __name__ == '__main__':
         action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))[0]
         outfile = open('path.pkl', 'w')
         pickle.dump(action_list, outfile)
+<<<<<<< HEAD
     main(agent=QLearner(ld=3))
+=======
+    main(agent=QLearner(ld=4))
+>>>>>>> 0746d5efdfb1cd8fb5d9afb119378edf3b32eced
