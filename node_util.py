@@ -7,7 +7,7 @@ from pygame.locals import *
 from pipes import PIPES
 from copy import deepcopy
 
-pipeind = 0
+PIPE_IND = 0
 SCORE_GOAL = 100
 FPS = 3000
 SCREENWIDTH = 288
@@ -17,67 +17,10 @@ playerMinVelY = -8   # min vel along Y, max ascend speed
 pipeVelX = -4
 playerFlapAcc = -9   # players speed on flapping
 
-# amount by which base can maximum shift to left
-PIPEGAPSIZE = 100  # gap between upper and lower part of pipe
-BASEY = SCREENHEIGHT * 0.79
-# image, sound and hitmask  dicts
+PIPE_GAP_SIZE = 100
+BASE_Y = SCREENHEIGHT * 0.79
 IMAGES, SOUNDS, HITMASKS = {}, {}, {}
 
-# list of all possible players (tuple of 3 positions of flap)
-PLAYERS_LIST = (
-    # red bird
-    (
-        'assets/sprites/redbird-upflap.png',
-        'assets/sprites/redbird-midflap.png',
-        'assets/sprites/redbird-downflap.png',
-    ),
-    # blue bird
-    (
-        # amount by which base can maximum shift to left
-        'assets/sprites/bluebird-upflap.png',
-        'assets/sprites/bluebird-midflap.png',
-        'assets/sprites/bluebird-downflap.png',
-    ),
-    # yellow bird
-    (
-        'assets/sprites/yellowbird-upflap.png',
-        'assets/sprites/yellowbird-midflap.png',
-        'assets/sprites/yellowbird-downflap.png',
-    ),
-)
-# PLAYERS_LIST = (
-#     # red bird
-#     (
-#         'assets/sprites/scott1.png',
-#         'assets/sprites/scott1.png',
-#         'assets/sprites/scott1.png',
-#     ),
-#     # blue bird
-#     (
-#         # amount by which base can maximum shift to left
-#         'assets/sprites/scott1.png',
-#         'assets/sprites/scott1.png',
-#         'assets/sprites/scott1.png',
-#     ),
-#     # yellow bird
-#     (
-#         'assets/sprites/scott1.png',
-#         'assets/sprites/scott1.png',
-#         'assets/sprites/scott1.png',
-#     ),
-# )
-
-# list of backgrounds
-BACKGROUNDS_LIST = (
-    'assets/sprites/background-day.png',
-    'assets/sprites/background-night.png',
-)
-
-# list of pipes
-PIPES_LIST = (
-    'assets/sprites/pipe-green.png',
-    'assets/sprites/pipe-red.png',
-)
 
 
 class FB_State:
@@ -116,6 +59,14 @@ class FB_State:
         return repr(self)
 
 
+class Node:
+
+    def __init__(self, state, flapped=None, cost=0):
+        self.state = state
+        self.flapped = flapped
+        self.cost = cost
+
+
 def getStart():
     state = FB_State()
     state.score = int(0)
@@ -143,7 +94,7 @@ def getStart():
     # player velocity, max velocity, downward accleration, accleration on flap
     state.vely = -9   # player's velocity along Y, default same as playerFlapped
     state.acc = 1   # players downward accleration
-    return state
+    return Node(state)
 
 
 def isGoalState(state, num_pipes):
@@ -155,13 +106,10 @@ def getSuccessors(state):
         return []
     global expanded
     expanded += 1
-    # if expanded % 100 == 0:
-    #     print state.x, state.y, state.velx, state.vely
     successors = []
     for flapped in [True, False]:
 
         newState = deepcopy(state)
-
 
         if flapped:
             if newState.y > -2 * IMAGES['player'][0].get_height():
@@ -174,7 +122,7 @@ def getSuccessors(state):
             newState.vely += newState.acc
 
         playerHeight = IMAGES['player'][newState.index].get_height()
-        newState.y += min(newState.vely, BASEY - newState.y - playerHeight)
+        newState.y += min(newState.vely, BASE_Y - newState.y - playerHeight)
 
         # move pipes to left
         for uPipe, lPipe in zip(newState.upipes, newState.lpipes):
@@ -205,7 +153,7 @@ def getSuccessors(state):
         if newState.upipes[0]['x'] < -IMAGES['pipe'][0].get_width():
             newState.upipes.pop(0)
             newState.lpipes.pop(0)
-        successors.append((newState, flapped, 0))
+        successors.append(Node(newState, flapped))
     return successors
 
 
@@ -217,28 +165,20 @@ def initialize():
 
     # base (ground) sprite
     IMAGES['base'] = pygame.image.load(
-        'assets/sprites/base.png').convert_alpha()
+        './assets/sprites/base.png').convert_alpha()
 
-    # initialize
-    # select random background sprites
-    randBg = random.randint(0, len(BACKGROUNDS_LIST) - 1)
-    IMAGES['background'] = pygame.image.load(
-        BACKGROUNDS_LIST[randBg]).convert()
+    IMAGES['background'] = pygame.image.load('assets/sprites/background-day.png').convert()
 
-    # select random player sprites
-    randPlayer = random.randint(0, len(PLAYERS_LIST) - 1)
     IMAGES['player'] = (
-        pygame.image.load(PLAYERS_LIST[randPlayer][0]).convert_alpha(),
-        pygame.image.load(PLAYERS_LIST[randPlayer][1]).convert_alpha(),
-        pygame.image.load(PLAYERS_LIST[randPlayer][2]).convert_alpha(),
+        pygame.image.load('assets/sprites/bluebird-upflap.png').convert_alpha(),
+        pygame.image.load('assets/sprites/bluebird-midflap.png').convert_alpha(),
+        pygame.image.load('assets/sprites/bluebird-downflap.png').convert_alpha(),
     )
 
-    # select random pipe sprites
-    pipeindex = random.randint(0, len(PIPES_LIST) - 1)
     IMAGES['pipe'] = (
         pygame.transform.rotate(
-            pygame.image.load(PIPES_LIST[pipeindex]).convert_alpha(), 180),
-        pygame.image.load(PIPES_LIST[pipeindex]).convert_alpha(),
+            pygame.image.load('assets/sprites/pipe-green.png').convert_alpha(), 180),
+        pygame.image.load('assets/sprites/pipe-green.png').convert_alpha(),
     )
 
     # hismask for pipes
@@ -253,8 +193,15 @@ def initialize():
         getHitmask(IMAGES['player'][1]),
         getHitmask(IMAGES['player'][2]),
     )
-# def search():
 
+def getHitmask(image):
+    """returns a hitmask using an image's alpha."""
+    mask = []
+    for x in range(image.get_width()):
+        mask.append([])
+        for y in range(image.get_height()):
+            mask[x].append(bool(image.get_at((x, y))[3]))
+    return mask
 
 def checkCrash(player, upperPipes, lowerPipes):
     """returns True if player collders with base or pipes."""
@@ -263,7 +210,7 @@ def checkCrash(player, upperPipes, lowerPipes):
     player['h'] = IMAGES['player'][0].get_height()
 
     # if player crashes into ground
-    if player['y'] + player['h'] >= BASEY - 1:
+    if player['y'] + player['h'] >= BASE_Y - 1:
         return [True, True]
     else:
 
@@ -283,10 +230,8 @@ def checkCrash(player, upperPipes, lowerPipes):
             lHitmask = HITMASKS['pipe'][1]
 
             # if bird collided with upipe or lpipe
-            uCollide = pixelCollision(
-                playerRect, uPipeRect, pHitMask, uHitmask)
-            lCollide = pixelCollision(
-                playerRect, lPipeRect, pHitMask, lHitmask)
+            uCollide = pixelCollision(playerRect, uPipeRect, pHitMask, uHitmask)
+            lCollide = pixelCollision(playerRect, lPipeRect, pHitMask, lHitmask)
 
             if uCollide or lCollide:
                 return [True, False]
@@ -309,13 +254,3 @@ def pixelCollision(rect1, rect2, hitmask1, hitmask2):
             if hitmask1[x1 + x][y1 + y] and hitmask2[x2 + x][y2 + y]:
                 return True
     return False
-
-
-def getHitmask(image):
-    """returns a hitmask using an image's alpha."""
-    mask = []
-    for x in range(image.get_width()):
-        mask.append([])
-        for y in range(image.get_height()):
-            mask[x].append(bool(image.get_at((x, y))[3]))
-    return mask
