@@ -19,22 +19,22 @@ IMAGES, SOUNDS, HITMASKS = {}, {}, {}
 PLAYERS_LIST = (
     # red bird
     (
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
+        'assets/sprites/redbird-upflap.png',
+        'assets/sprites/redbird-midflap.png',
+        'assets/sprites/redbird-downflap.png',
     ),
     # blue bird
     (
         # amount by which base can maximum shift to left
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
+        'assets/sprites/bluebird-upflap.png',
+        'assets/sprites/bluebird-midflap.png',
+        'assets/sprites/bluebird-downflap.png',
     ),
     # yellow bird
     (
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
-        'assets/sprites/scott1.png',
+        'assets/sprites/yellowbird-upflap.png',
+        'assets/sprites/yellowbird-midflap.png',
+        'assets/sprites/yellowbird-downflap.png',
     ),
 )
 
