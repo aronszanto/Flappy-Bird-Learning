@@ -28,7 +28,7 @@ def search(structure, num_pipes, cost_function=None):
 
     for successor in node_util.getSuccessors(start.state):
         fringe.push((successor.state, [successor.flapped]), successor.cost, cost_function(successor))
-        visited[successor.state] = successor.cost  # update best cost to successors
+        visited[successor.state] = successor.cost  # _update best cost to successors
     called = 0
     while not fringe.isEmpty():
         called += 1
@@ -59,22 +59,3 @@ def heuristic(state):
         if pipeMidPos > playerMidPos:
             y_coord = lpipe['y'] - node_util.PIPE_GAP_SIZE + 37
             return abs(state.y - y_coord) + abs(state.x - pipeMidPos) - (state.score * 1000)
-<<<<<<< HEAD
-initialize()
-actionList = search(util.PriorityQueue, 450, lambda successor: heuristic(successor))
-import flappy_follow
-flappy_follow.main(actionList[0])
-
-# from time import time
-# with open("timing.out", 'w') as f:
-#     i = 20
-#     while i <= 450:
-#         start = time()
-#         s = search(util.PriorityQueue, i, lambda successor: heuristic(successor))
-#         num_expanded = s[1]
-#         length = len(s[0])
-#         # f.write(str(i) + ',' + str(time() - start) + ',' + str(num_expanded) + '\n')
-#         print i, str(time() - start) + ',' + str(num_expanded) + ',' + str(length) + ',' + str(float(num_expanded)/length)
-#         i += 20
-=======
->>>>>>> a29016de0b46a433f85ab0c7f499f9d0b579b3ba

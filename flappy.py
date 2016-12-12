@@ -7,9 +7,10 @@ from pygame.locals import *
 import node_util
 import algs
 import structs
-import pickle
+import json
 import os
 from q_learner import QLearner
+import argparse
 
 PIPE_IND = 0
 FPS = 60
@@ -19,48 +20,8 @@ PIPE_GAP_SIZE = 100
 BASE_Y = SCREENHEIGHT * 0.79
 IMAGES, SOUNDS, HITMASKS = {}, {}, {}
 
-<<<<<<< HEAD
-# list of all possible players (tuple of 3 positions of flap)
-PLAYERS_LIST = (
-    # red bird
-    (
-        'assets/sprites/redbird-upflap.png',
-        'assets/sprites/redbird-midflap.png',
-        'assets/sprites/redbird-downflap.png',
-    ),
-    # blue bird
-    (
-        # amount by which base can maximum shift to left
-        'assets/sprites/bluebird-upflap.png',
-        'assets/sprites/bluebird-midflap.png',
-        'assets/sprites/bluebird-downflap.png',
-    ),
-    # yellow bird
-    (
-        'assets/sprites/yellowbird-upflap.png',
-        'assets/sprites/yellowbird-midflap.png',
-        'assets/sprites/yellowbird-downflap.png',
-    ),
-)
-
-# list of backgrounds
-BACKGROUNDS_LIST = (
-    'assets/sprites/background-day.png',
-    'assets/sprites/background-night.png',
-)
-
-# list of pipes
-PIPES_LIST = (
-    'assets/sprites/pipe-green.png',
-    'assets/sprites/pipe-red.png',
-)
-
-
-def main():
-=======
 
 def main(action_list=None, agent=None):
->>>>>>> a29016de0b46a433f85ab0c7f499f9d0b579b3ba
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -100,35 +61,34 @@ def main(action_list=None, agent=None):
     SOUNDS['swoosh'] = pygame.mixer.Sound('assets/audio/swoosh' + soundExt)
     SOUNDS['wing'] = pygame.mixer.Sound('assets/audio/wing' + soundExt)
 
+    IMAGES['background'] = pygame.image.load('assets/sprites/background-day.png').convert()
+
+    IMAGES['player'] = (
+        pygame.image.load('assets/sprites/bluebird-upflap.png').convert_alpha(),
+        pygame.image.load('assets/sprites/bluebird-midflap.png').convert_alpha(),
+        pygame.image.load('assets/sprites/bluebird-downflap.png').convert_alpha(),
+    )
+
+    IMAGES['pipe'] = (
+        pygame.transform.rotate(
+            pygame.image.load('assets/sprites/pipe-green.png').convert_alpha(), 180),
+        pygame.image.load('assets/sprites/pipe-green.png').convert_alpha(),
+    )
+
+    # hismask for pipes
+    HITMASKS['pipe'] = (
+        get_hitmask(IMAGES['pipe'][0]),
+        get_hitmask(IMAGES['pipe'][1]),
+    )
+
+    # hitmask for player
+    HITMASKS['player'] = (
+        get_hitmask(IMAGES['player'][0]),
+        get_hitmask(IMAGES['player'][1]),
+        get_hitmask(IMAGES['player'][2]),
+    )
+
     while True:  # Game loop
-
-        IMAGES['background'] = pygame.image.load('assets/sprites/background-day.png').convert()
-
-        IMAGES['player'] = (
-            pygame.image.load('assets/sprites/bluebird-upflap.png').convert_alpha(),
-            pygame.image.load('assets/sprites/bluebird-midflap.png').convert_alpha(),
-            pygame.image.load('assets/sprites/bluebird-downflap.png').convert_alpha(),
-        )
-
-        IMAGES['pipe'] = (
-            pygame.transform.rotate(
-                pygame.image.load('assets/sprites/pipe-green.png').convert_alpha(), 180),
-            pygame.image.load('assets/sprites/pipe-green.png').convert_alpha(),
-        )
-
-        # hismask for pipes
-        HITMASKS['pipe'] = (
-            get_hitmask(IMAGES['pipe'][0]),
-            get_hitmask(IMAGES['pipe'][1]),
-        )
-
-        # hitmask for player
-        HITMASKS['player'] = (
-            get_hitmask(IMAGES['player'][0]),
-            get_hitmask(IMAGES['player'][1]),
-            get_hitmask(IMAGES['player'][2]),
-        )
-
         movement_info = show_welcome_animation(action_list=action_list, agent=agent)
         crash_info = main_game(movement_info, action_list=action_list, agent=agent)
         show_game_over_screen(crash_info, agent=agent)
@@ -261,13 +221,13 @@ def main_game(movement_info, action_list=None, agent=None):
         crashTest = check_crash({'x': player_x, 'y': player_y, 'index': player_index},
                                 upper_pipes, lower_pipes)
 
-        # TODO crash test should take into account that the bird can't fly off the screen
+        # TODO crash test should take into account that the bird can't fly off the screen... Logic needn't be out here.
         if crashTest[0] or player_y <= 0:
 
             if agent:
                 agent.learn_from_episode()
-                with open('scores.txt', 'a') as score_keeping:
-                    score_keeping.write('Episode: {}, Score: {}\n'.format(agent.episodes, score))
+                with open('performance/ties.csv', 'a') as score_keeping:
+                    score_keeping.write('{},{}\n'.format(agent.episodes, score))
 
             return {
                 'y': player_y,
@@ -489,16 +449,34 @@ def get_hitmask(image):
 
 
 if __name__ == '__main__':
-    node_util.initialize()
-    if os.path.isfile('path.pkl'):
-        infile = open('path.pkl')
-        action_list = pickle.load(infile)
+
+    parser = argparse.ArgumentParser(description='Play FB, solve with informed search, or teach the bird with RL.')
+    parser.add_argument('-s', '--search', help='Solve with A*, then watch.', action='store_true')
+    parser.add_argument('-l', '--learn', help='Solve with TD-lambda, then watch.', action='store_true')
+    parser.add_argument('-w', '--weights', help='Upload previous solution', action='store_true')
+    args = vars(parser.parse_args())
+
+    if args['search']:
+        action_list = None
+        node_util.initialize()
+        if args['weights']:
+            if os.path.isfile('path.json'):
+                infile = open('path.json')
+                action_list = json.load(infile)
+            else:
+                action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))[0]
+                outfile = open('path.json', 'w')
+                dump = json.dumps(action_list, sort_keys=True, indent=2, separators=(',', ': '))
+                outfile.write(dump)
+
+        main(action_list=action_list)
+
+    elif args['learn']:
+        path = None
+        if args['weights']:
+            path = 'training/demo.json'
+
+        main(agent=QLearner(import_from=path, export_to='training/ties.json', epsilon=None, ld=1, training=True))
+
     else:
-        action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))[0]
-        outfile = open('path.pkl', 'w')
-        pickle.dump(action_list, outfile)
-<<<<<<< HEAD
-    main(agent=QLearner(ld=3))
-=======
-    main(agent=QLearner(ld=4))
->>>>>>> 0746d5efdfb1cd8fb5d9afb119378edf3b32eced
+        main()

@@ -1,8 +1,7 @@
-from __future__ import division
 from collections import defaultdict
 import random
 import os
-import pickle
+import json
 import sys
 
 FALL, FLAP = 0, 1
@@ -10,150 +9,186 @@ FALL, FLAP = 0, 1
 
 class QLearner:
 
-<<<<<<< HEAD
-    def __init__(self, path=None, ld=0, epsilon=0.01):
-        self.q_values = self.import_q_values(path) if path else defaultdict(float)
-        self.epsilon = epsilon
-        self.alpha = 0.8
-        self.gamma = 1
-        self.actions = list([FALL, FLAP])
-        self.episodes = 0
-        self.history = list()
-        self.ld = ld
-        # Note: Bird has height 24, width 34.
-        self.y_unit = 15  # [-125, 160] potential values
-        self.x_unit = 30  # [30, 430] potential values
-        self.v_unit = 2   # [-10, 10] potential values
-        self.death_value = -1
-        self.dump_interval = 200
-        self.max_episodes = 1500
-        self.reporting_interval = 5
-
-    def get_current_epsilon(self):
-        # return 1.0 / (self.episodes + 1.0) if not self.epsilon else self.epsilon
-        return max(0.05 * (self.max_episodes - self.episodes) / self.max_episodes, self.epsilon)
-=======
-    def __init__(self, path=None, ld=0, epsilon=None):
-
-        self.q_values = self.import_q_values(path) if path else defaultdict(float)
+    def __init__(self, import_from=None, export_to=None, ld=0, epsilon=None, penalty=-1000.0, reward=1.0, training=True):
 
         self.epsilon = epsilon  # off-policy rate
         self.alpha = 0.7        # learning rate
-        self.gamma = 0.8        # discount
+        self.gamma = 1.0        # discount
         self.ld = ld            # lambda
+        self.penalty = penalty
+        self.reward = reward
 
         self.actions = list([FALL, FLAP])
         self.episodes = 0
         self.max_episodes = 3000
         self.history = list()   # s, a pairs for t = 0 ... self.max_episodes
->>>>>>> 0746d5efdfb1cd8fb5d9afb119378edf3b32eced
+        self.training = training
 
+        self.import_from = import_from
+        self.export_to = export_to
         self.dump_interval = 200
         self.reporting_interval = 5
 
-    def import_q_values(self, path):
-        if os.path.isfile(path):
-            with open(path) as infile:
-                return pickle.load(infile)
+        self.q_values = defaultdict(float)
+        self._init_q_values()
 
-    def dump_q_values(self, path):
-        with open(path, 'w') as outfile:
-            pickle.dump(self.q_values, outfile)
+    def _init_q_values(self):
+        if self.import_from:
+            if os.path.isfile(self.import_from):
+                with open(self.import_from) as infile:
+                    self.q_values = defaultdict(float, json.load(infile))
 
-    def get_current_epsilon(self):
-        return max(1.0 / (self.episodes + 1.0), 0.01) if not self.epsilon else self.epsilon
+    def _dump_q_values(self):
+        with open(self.export_to, 'w') as outfile:
+            dump = json.dumps(self.q_values, sort_keys=True, indent=2, separators=(',', ': '))
+            outfile.write(dump)
 
-    def off_policy(self):
-        return random.random() < self.get_current_epsilon()
+    def _get_current_epsilon(self):
 
-    def get_q_value(self, state, action):
-        return self.q_values[state, action]
+        """
+        Possible functions for epsilon.
 
-    def set_q_value(self, state, action, q_):
-        self.q_values[state, action] = q_
+        Examples include:
 
-    def get_value(self, state):
-        # Assumes terminal states have value == -10
-        return max([self.get_q_value(state, action) for action in self.actions]) if state else -100.0
+            0.25 / (self.episodes / 100 + 1)
+            max(0.01, 1.0 / (self.episodes + 1)
+            math.exp(Q(s, FALL) / T) / ((math.exp(Q(s, FALL) / T) + math.exp(Q(s, FLAP) / T))
+                where T = 10.0/(self.episodes / 25 + 1)
 
-    def get_greedy_action(self, state):
-        return FALL if self.get_q_value(state, FALL) >= self.get_q_value(state, FLAP) else FLAP
+            and so on...
 
-    def get_action(self, state):
-        action = random.choice(self.actions) if self.off_policy() else self.get_greedy_action(state)
+        """
+        return 0.0 if not self.epsilon else self.epsilon
+
+    def _off_policy(self):
+        return random.random() < self._get_current_epsilon()
+
+    def _get_q_value(self, state, action):
+        return self.q_values[str((state, action))]
+
+    def _set_q_value(self, state, action, q_):
+        self.q_values[str((state, action))] = q_
+
+    def _get_value(self, state):
+        return max([self._get_q_value(state, action) for action in self.actions]) if state else self.penalty
+
+    def _get_greedy_action(self, state):
+        # return FALL if self._get_q_value(state, FALL) >= self._get_q_value(state, FLAP) else FLAP
+        fall_value = self._get_q_value(state, FALL)
+        flap_value = self._get_q_value(state, FLAP)
+        if fall_value > flap_value:
+            return FALL
+        elif flap_value > fall_value:
+            return FLAP
+        else:  # Heuristic-based tie-breaking...
+            rel_x, rel_y, vel_y = state
+            if rel_y > -10 and vel_y < 0: # Above midpoint and rising
+                return FALL
+            elif rel_y < -10 and vel_y > 0: # Below midpoint and falling
+                return FLAP
+            else:
+                return FALL
+
+    def _get_action(self, state):
+        action = random.choice(self.actions) if self._off_policy() else self._get_greedy_action(state)
         self.history.append((state, action))
         return action
 
-    def calculate_reward(self, state):
-        if not state:  # Previous state preceded a crash
-            return -100.0
-        """
-        The bird shouldn't be rewarded for simply staying alive. This associates small positive scores with pointless flaps and falls
-        across many states making it harder to learn an effective policy when encountering new states.
+    def _calculate_reward(self, state):
 
-        TODO Consider limiting the number of flaps in a given period using some sort of get_legal_actions() function.
         """
+        It's possible to make the reward function more advanced. For example:
+
         rel_x, rel_y = state[0], state[1]
-<<<<<<< HEAD
-
-        # Reward for staying close to the midpoints of the pipes when at various horizontal distances away
-        if abs(rel_y) <= 40:
-            if rel_x <= 100:
-                reward = 1.0
-            if rel_x <= 50:
-                reward = 2.0
-            if rel_x <= 0:
-                reward = 5.0
-            if rel_x <= -60:  # Score point in actual game
-                return 10
-=======
->>>>>>> 0746d5efdfb1cd8fb5d9afb119378edf3b32eced
 
         if rel_x <= 200:
 
-            if abs(rel_y) <= 20:  # Reward for staying in line with gap
-                return 5.0
+            if rel_x <= -20:
+                return 10.0  # Reward for scoring a point in the game
+
+            if abs(rel_y) <= 50:
+                return 5.0  # Reward for staying in line with gap
 
             return 1.0  # Standard reward for staying alive, given that we've past the first pipe.
 
-        # Initial reward at beginning of game to avoid bird flying into ceiling constantly.
         return 0.0
+        """
 
-    def update(self, state, action, next_state, reward):
-        q = self.get_q_value(state, action)
-        q_ = q + self.alpha * (reward + self.gamma * self.get_value(next_state) - q)
-        self.set_q_value(state, action, q_)
+        # if not state:
+        #     return -1.0
+        #
+        # rel_x, rel_y = state[0], state[1]
+        # if rel_x < -10 and abs(rel_y) <= 50:
+        #     return 10.0  # Reward for scoring a point in the game
 
-    def assign_credit(self, t, n):
+        if not state:
+            return self.penalty
 
-        # TODO If the bird dies near the gap, it's due to a more recent action.
-        # TODO If it does far from the gap, it's probably a longer sequence of actions.
+        return self.reward
 
-        s_ = self.history[t + 1][0] if t + 1 < len(self.history) else None
-<<<<<<< HEAD
-        if not s_:
-            n = min(2, n)  # Typically when the bird dies it's due to a more recent action...
+        # if not state:  # Previous state preceded a crash
+        #     return self.penalty
+        #
+        # return self.reward
 
-        r = self.calculate_reward(s_, n=n)
-=======
->>>>>>> 0746d5efdfb1cd8fb5d9afb119378edf3b32eced
+    def _update(self, state, action, next_state, reward):
+        if not self.training:
+            return
 
-        if not s_:  # Additionally punish previous q-state if flapped into oblivion
-            s, a = self.history[t]
-            if a == FLAP:
-                self.update(s, a, s_, -1000.0)
+        q = self._get_q_value(state, action)
+        q_ = q + self.alpha * (reward + self.gamma * self._get_value(next_state) - q)
+        self._set_q_value(state, action, q_)
 
-        # Assign credit to current, and previous n - 1 q-states
-        r = self.calculate_reward(s_)
-        for t_ in range(t, t - n, -1):
-            s, a = self.history[t_]
-            self.update(s, a, s_, r)
+    def _extract_state(self, x_offset, y_offset, y_vel):
+        """
+        :param x_offset: relative horizontal distance from bird's RHS to LHS of lower pipe
+        :param y_offset: relative vertical distance from bird's midpoint to gap midpoint
+        :param y_vel: vertical velocity
+
+        Note: Bird has height == 24, width == 34
+
+        It's possible to make the state space even smaller by breaking up y_vel:
+
+            if y_vel > 5:
+                y_vel = 1
+            elif y_vel > 0:
+                y_vel = 2
+            elif y_vel > -5:
+                y_vel = 3
+            elif y_vel > -11:
+                y_vel = 4
+        """
+        x_offset -= x_offset % 10 if x_offset <= 100 else x_offset % 100
+        y_offset -= y_offset % 10 if abs(y_offset) <= 100 else y_offset % 100  # i.e. from -100 to 100
+        return x_offset, y_offset, y_vel
+
+    def take_action(self, game_state):
+        state = self._extract_state(*game_state)
+        action = self._get_action(state)
+        return action
 
     def learn_from_episode(self):
         num_actions = len(self.history)
-        for t in range(num_actions):
-            n = min(self.ld, t) + 1
-            self.assign_credit(t, n)
+        s_ = None  # s_ is the next state in the _update: s, a, s_, r
+        for t in range(num_actions - 1, -1, -1):  # Update in reverse order to speed up learning
+            s, a = self.history[t]  # Current state
+
+            # Additionally penalize FLAPs which pushed the bird upwards instead of towards the gap
+            # np = 0
+            # rel_x, rel_y = s[0], s[1]
+            # if -10 <= rel_x <= 50 and rel_y > 30 and a == FLAP and np != 10:
+            #     self._update(s, a, s_, self.penalty)
+            #     np += 1
+
+            # Standard updates
+            r = self._calculate_reward(s_)  # Reward is relative to the above s irrespective of lambda
+            n = min(t, self.ld) + 1
+            for t_ in range(t, t - n, -1):
+                s, a = self.history[t_]
+                self._update(s, a, s_, r)
+                s_ = s  # TD-l keeps the reward calculated in the outer for-loop, but s_ must still be updated
+
+            s_ = s  # After propagating reward to self.ld - 1 other states, revert to the actual next state
 
         # Clear episode's history
         self.history = list()
@@ -162,40 +197,12 @@ class QLearner:
         if self.episodes % self.reporting_interval == 0:
             print(
                   "{} episodes complete; {} states instantiated, {} exploration factor"
-                  .format(self.episodes, len(self.q_values), self.get_current_epsilon())
+                  .format(self.episodes, len(self.q_values), self._get_current_epsilon())
                  )
 
         if self.episodes % self.dump_interval == 0:
-            self.dump_q_values("training.pkl")
+            self._dump_q_values()
 
         if self.episodes == self.max_episodes + 1:
             sys.exit()
 
-    def extract_state(self, x_offset, y_offset, y_vel):
-        """
-        Note: Bird has height == 24, width == 34
-
-<<<<<<< HEAD
-        # Grid is more spread out relatively further from the center of the gap
-        x_offset -= x_offset % 20 if x_offset <= 150 else x_offset % 50
-        y_offset -= y_offset % 20 if abs(y_offset) <= 80 else y_offset % 30
-
-        return (
-                x_offset,# - x_offset % self.x_unit,
-                y_offset,# - y_offset % self.y_unit,
-                y_vel - y_vel % self.v_unit,
-               )
-=======
-        :param x_offset: relative horizontal distance from bird's RHS to LHS of lower pipe
-        :param y_offset: relative vertical distance from bird's midpoint to gap midpoint
-        :param y_vel: vertical velocity
-        """
-        x_offset -= x_offset % 10 if x_offset <= 100 else x_offset % 100
-        y_offset -= y_offset % 10 if abs(y_offset) <= 150 else y_offset % 100
-        return x_offset, y_offset, y_vel
->>>>>>> 0746d5efdfb1cd8fb5d9afb119378edf3b32eced
-
-    def take_action(self, game_state):
-        state = self.extract_state(*game_state)
-        action = self.get_action(state)
-        return action
