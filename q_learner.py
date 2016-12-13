@@ -9,7 +9,7 @@ FALL, FLAP = 0, 1
 
 class QLearner:
 
-    def __init__(self, import_from=None, export_to=None, ld=0, epsilon=None, penalty=-1000.0, reward=1.0, training=True):
+    def __init__(self, import_from=None, export_to=None, ld=1, epsilon=None, penalty=-1000.0, reward=1.0, training=True):
 
         self.epsilon = epsilon  # off-policy rate
         self.alpha = 0.7        # learning rate
@@ -39,6 +39,9 @@ class QLearner:
                     self.q_values = defaultdict(float, json.load(infile))
 
     def _dump_q_values(self):
+        if not self.export_to:
+            return
+
         with open(self.export_to, 'w') as outfile:
             dump = json.dumps(self.q_values, sort_keys=True, indent=2, separators=(',', ': '))
             outfile.write(dump)
@@ -58,9 +61,12 @@ class QLearner:
             and so on...
 
         """
-        return 0.0 if not self.epsilon else self.epsilon
-
+        return max(0.05 /(self.episodes + 1.0), 0.00001) if (not self.epsilon or self.epsilon == 0.0) else self.epsilon
+        
     def _off_policy(self):
+        if not self.training:
+            return False
+
         return random.random() < self._get_current_epsilon()
 
     def _get_q_value(self, state, action):
@@ -73,21 +79,7 @@ class QLearner:
         return max([self._get_q_value(state, action) for action in self.actions]) if state else self.penalty
 
     def _get_greedy_action(self, state):
-        # return FALL if self._get_q_value(state, FALL) >= self._get_q_value(state, FLAP) else FLAP
-        fall_value = self._get_q_value(state, FALL)
-        flap_value = self._get_q_value(state, FLAP)
-        if fall_value > flap_value:
-            return FALL
-        elif flap_value > fall_value:
-            return FLAP
-        else:  # Heuristic-based tie-breaking...
-            rel_x, rel_y, vel_y = state
-            if rel_y > -10 and vel_y < 0: # Above midpoint and rising
-                return FALL
-            elif rel_y < -10 and vel_y > 0: # Below midpoint and falling
-                return FLAP
-            else:
-                return FALL
+        return FALL if self._get_q_value(state, FALL) >= self._get_q_value(state, FLAP) else FLAP
 
     def _get_action(self, state):
         action = random.choice(self.actions) if self._off_policy() else self._get_greedy_action(state)
@@ -113,28 +105,11 @@ class QLearner:
 
         return 0.0
         """
-
-        # if not state:
-        #     return -1.0
-        #
-        # rel_x, rel_y = state[0], state[1]
-        # if rel_x < -10 and abs(rel_y) <= 50:
-        #     return 10.0  # Reward for scoring a point in the game
-
-        if not state:
+        if not state:  # Previous state preceded a crash
             return self.penalty
-
         return self.reward
 
-        # if not state:  # Previous state preceded a crash
-        #     return self.penalty
-        #
-        # return self.reward
-
     def _update(self, state, action, next_state, reward):
-        if not self.training:
-            return
-
         q = self._get_q_value(state, action)
         q_ = q + self.alpha * (reward + self.gamma * self._get_value(next_state) - q)
         self._set_q_value(state, action, q_)
@@ -168,17 +143,14 @@ class QLearner:
         return action
 
     def learn_from_episode(self):
+
+        if not self.training:
+            return
+
         num_actions = len(self.history)
         s_ = None  # s_ is the next state in the _update: s, a, s_, r
         for t in range(num_actions - 1, -1, -1):  # Update in reverse order to speed up learning
             s, a = self.history[t]  # Current state
-
-            # Additionally penalize FLAPs which pushed the bird upwards instead of towards the gap
-            # np = 0
-            # rel_x, rel_y = s[0], s[1]
-            # if -10 <= rel_x <= 50 and rel_y > 30 and a == FLAP and np != 10:
-            #     self._update(s, a, s_, self.penalty)
-            #     np += 1
 
             # Standard updates
             r = self._calculate_reward(s_)  # Reward is relative to the above s irrespective of lambda
@@ -205,4 +177,3 @@ class QLearner:
 
         if self.episodes == self.max_episodes + 1:
             sys.exit()
-

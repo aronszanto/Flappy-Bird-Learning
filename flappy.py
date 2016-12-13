@@ -226,7 +226,7 @@ def main_game(movement_info, action_list=None, agent=None):
 
             if agent:
                 agent.learn_from_episode()
-                with open('performance/ties.csv', 'a') as score_keeping:
+                with open('scores7.csv', 'a') as score_keeping:
                     score_keeping.write('{},{}\n'.format(agent.episodes, score))
 
             return {
@@ -451,23 +451,28 @@ def get_hitmask(image):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Play FB, solve with informed search, or teach the bird with RL.')
+    parser.add_argument('-d', '--demo', help='See a demo of the TD-learner', action='store_true')
     parser.add_argument('-s', '--search', help='Solve with A*, then watch.', action='store_true')
     parser.add_argument('-l', '--learn', help='Solve with TD-lambda, then watch.', action='store_true')
     parser.add_argument('-w', '--weights', help='Upload previous solution', action='store_true')
+    parser.add_argument('size', type=int, nargs='?', help='size of the search problem to solve. Ignored if agent is in RL mode.')
     args = vars(parser.parse_args())
 
     if args['search']:
+        if args['size'] > 450:
+            print "please choose a number under 450; deterministic pipes are only defined up to 450."
+            sys.exit()
         action_list = None
         node_util.initialize()
         if args['weights']:
             if os.path.isfile('path.json'):
                 infile = open('path.json')
                 action_list = json.load(infile)
-            else:
-                action_list = algs.search(structs.PriorityQueue, 450, lambda successor: algs.heuristic(successor))[0]
-                outfile = open('path.json', 'w')
-                dump = json.dumps(action_list, sort_keys=True, indent=2, separators=(',', ': '))
-                outfile.write(dump)
+        else:
+            action_list = algs.search(structs.PriorityQueue, args['size'], lambda successor: algs.heuristic(successor))[0]
+            outfile = open('path.json', 'w')
+            dump = json.dumps(action_list, sort_keys=True, indent=2, separators=(',', ': '))
+            outfile.write(dump)
 
         main(action_list=action_list)
 
@@ -476,7 +481,10 @@ if __name__ == '__main__':
         if args['weights']:
             path = 'training/demo.json'
 
-        main(agent=QLearner(import_from=path, export_to='training/ties.json', epsilon=None, ld=1, training=True))
+        main(agent=QLearner(import_from=path, export_to='training/weights.json', epsilon=None, ld=1, training=True))
+
+    elif args['demo']:
+        main(agent=QLearner(import_from='training/demo.json', training=False))
 
     else:
         main()
