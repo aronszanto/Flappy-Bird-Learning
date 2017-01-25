@@ -2,8 +2,7 @@
 
 ![Flappy Bird 101](https://github.com/aszanto9/Flappy-Bird-Learning/blob/master/assets/101.png)
 ## Overview
-* Flappy Bird is a wildly successful game released for iPhone in 2014. This project examines AI solutions to the game along the lines of
-* reinforcement learning and informed search. For a detailed description of the project, read our white paper in this repository.
+* Flappy Bird is a wildly successful game released for iPhone in 2014. This project examines AI solutions to the game along the lines of reinforcement learning and informed search. For a detailed description of the project, read our white paper in this repository.
 ## Getting started
 * Make sure you've got PyGame 1.9+ installed and are running Python 2.7+. You may also need to update your PC's package of libpng.
 * For a demo of the TD-lambda learner on pre-trained weights, run `python flappy.py -d`.
